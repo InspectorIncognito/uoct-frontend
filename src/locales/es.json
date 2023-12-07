@@ -1,0 +1,35 @@
+{
+  "version": "Versión",
+  "menu": {
+    "home": "Inicio",
+    "about": "Acerca de",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión"
+  },
+  "home": {
+    "title": "Inicio",
+    "content": "Esta es la página de inicio."
+  },
+  "about": {
+    "title": "Acerca de",
+    "content": "Esta es la página para contar algo del sitio."
+  },
+  "login": {
+    "title": "Inicio de sesión",
+    "loginButton": "Iniciar sesión",
+    "success": "Login exitoso",
+    "fail": "Usuario o contraseña inválidos",
+    "validation": {
+      "username": {
+        "minLength": "El largo del nombre de usuario debe tener al menos 5 caracteres",
+        "required": "El nombre de usuario es obligatorio"
+      },
+      "password": {
+        "minLength": "El largo de la contraseña debe tener al menos 5 caracteres",
+        "required": "La contraseña es obligatoria"
+      }
+    }
+  },
+  "username": "Nombre de usuario",
+  "password": "Contraseña"
+}
