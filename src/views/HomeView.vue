@@ -1,16 +1,12 @@
 <template>
-  <div class="home">
-    <el-row justify="center">
-      <h1>{{ t("home.title") }}</h1>
-    </el-row>
-    <el-row justify="center">
-      <p>{{ t("home.content") }}</p>
-    </el-row>
-  </div>
+  <el-container>
+    <el-main> <MapView /> </el-main>
+  </el-container>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
+import MapView from "@/components/MapView.vue";
 
 const { t } = useI18n();
 </script>

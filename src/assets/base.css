@@ -1,0 +1,13 @@
+@media (width >= 1024px) {
+  body {
+    display: flex;
+    place-items: center;
+  }
+
+  #app {
+    display: flex;
+    height: 100vh;
+    padding: 0;
+    flex: 1;
+  }
+}
