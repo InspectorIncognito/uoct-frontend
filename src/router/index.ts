@@ -34,7 +34,11 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   // check user session
   const authStore = useAuthStore();
-  await authStore.verify();
+  try {
+    await authStore.verify();
+  } catch (error) {
+    authStore.purgeAuth();
+  }
 
   if (authStore.isAuthenticated || to.name === "login") {
     next();
