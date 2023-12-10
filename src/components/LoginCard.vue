@@ -76,7 +76,7 @@ const login = () => {
       .login(model.value)
       .then(() => {
         ElMessage({ message: t("login.success"), type: "success" });
-        router.push({ name: "home" });
+        router.push({ name: "map" });
       })
       .catch(() => {
         ElMessage({ message: t("login.fail"), type: "error" });

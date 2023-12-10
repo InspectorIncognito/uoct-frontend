@@ -1,7 +1,5 @@
 <template>
-  <el-container>
-    <el-main> <MapView /> </el-main>
-  </el-container>
+  <MapView />
 </template>
 
 <script setup lang="ts">
