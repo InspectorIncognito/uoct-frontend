@@ -1,6 +1,9 @@
 import APIService from "@/components/api/APIService";
 
-class GPSAPI {
+class MapAPI {
+  public static async getMapData() {
+    return APIService.get("geo/mapData");
+  }
   public static get_all_gps() {
     return APIService.get("gps/create");
   }
@@ -13,4 +16,4 @@ class GPSAPI {
   }
 }
 
-export default GPSAPI;
+export default MapAPI;

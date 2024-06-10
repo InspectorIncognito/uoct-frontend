@@ -8,12 +8,12 @@ class APIUser {
         password: password,
       },
     };
-    return APIService.post("api/login", params);
+    return APIService.post("login", params);
   }
 
   public static verify() {
     APIService.setHeader();
-    return APIService.post("api/verify", {});
+    return APIService.post("verify", {});
   }
 }
 
