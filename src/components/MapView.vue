@@ -88,7 +88,7 @@ async function updateGeoJson() {
     type: "line",
     source: geoJsonSourceId,
     paint: {
-      "line-color": "#888888",
+      "line-color": ["get", "color"],
       "line-width": 4,
     },
     layout: {
@@ -106,6 +106,7 @@ async function updateGeoJson() {
       },
     });
 
+    /*
     map.value.addLayer({
       id: selectedGeoJsonLayerId,
       type: "line",
@@ -115,6 +116,7 @@ async function updateGeoJson() {
         "line-width": 5,
       },
     });
+     */
   }
   currentGeoJson.value = response.data;
   map.value.on("click", geoJsonLayerId, onFeatureClick);
