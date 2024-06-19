@@ -5,6 +5,9 @@ import { onMounted, ref } from "vue";
 import MapAPI from "@/components/api/MapAPI";
 import { get_datetime_format } from "@/utils/gps_utils";
 import { ElNotification } from "element-plus";
+import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
+
+const REFRESH_INTERVAL = 15 * 60 * 1000;
 
 const style = ref("mapbox://styles/mapbox/dark-v10");
 const elSwitch = ref(false);
@@ -18,6 +21,8 @@ const geoJsonSourceId = "geojson-source";
 const geoJsonLayerId = "geojson-layer";
 const selectedGeoJsonSourceId = "selected-geojson-source";
 const selectedGeoJsonLayerId = "selected-geojson-layer";
+
+const currentDate = ref(new Date());
 
 const date_range = ref([]);
 
@@ -124,18 +129,11 @@ async function updateGeoJson() {
   map.value.on("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
 }
 
-onMounted(() => {
-  initializeMap();
-});
 const toggleView = () => {
   elSwitch.value = !elSwitch.value;
   style.value = elSwitch.value ? "mapbox://styles/mapbox/dark-v10" : "mapbox://styles/mapbox/streets-v12";
   map.value.setStyle(style.value);
 };
-
-function updateMap(newData: object) {
-  new mapboxgl.Marker().setLngLat([-70.65387, -33.443018]).addTo(map.value);
-}
 
 function get_by_range() {
   if (date_range.value !== []) {
@@ -153,8 +151,9 @@ function get_by_range() {
   } else console.log("Nada");
 }
 
-function getMapData() {
+function updateMap() {
   updateGeoJson().then(() => {
+    currentDate.value = new Date();
     ElNotification({
       title: "Alerta",
       message: "Mapa actualizado",
@@ -162,13 +161,25 @@ function getMapData() {
     });
   });
 }
+
+onMounted(() => {
+  initializeMap();
+  updateMap();
+  setInterval(() => {
+    updateMap();
+  }, REFRESH_INTERVAL);
+});
 </script>
 <template>
+  <!--
   <div class="test-section">
     <span class="material-icons">bug_report</span>
-    <el-button :onclick="getMapData">Test endpoint</el-button>
+    <el-button :onclick="updateMap">Test endpoint</el-button>
   </div>
-  <div ref="mapContainer" class="map-container"></div>
+  -->
+  <div ref="mapContainer" class="map-container">
+    <UpdateStatusComponent :date="currentDate" />
+  </div>
 </template>
 
 <style scoped>
@@ -188,6 +199,8 @@ function getMapData() {
 }
 
 body {
+  height: 100vh;
+  width: 100vw;
   margin: 0;
   padding: 0;
 }
