@@ -6,8 +6,20 @@ import MapAPI from "@/components/api/MapAPI";
 import { get_datetime_format } from "@/utils/gps_utils";
 import { ElNotification } from "element-plus";
 import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
+import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
+import { Cron } from "croner";
 
 const REFRESH_INTERVAL = 15 * 60 * 1000;
+
+const COLOR_DATA = [
+  { color: "#FF0000", info: "<= 15 km/h" },
+  { color: "#FD8000", info: "15 - 19 km/h" },
+  { color: "#FFFF00", info: "19 - 21 km/h" },
+  { color: "#02FE02", info: "21 - 25 km/h" },
+  { color: "#008000", info: "25 - 30 km/h" },
+  { color: "#0000FF", info: "> 30 km/h" },
+  { color: "#DDDDDD", info: "Sin datos" },
+];
 
 const style = ref("mapbox://styles/mapbox/dark-v10");
 const elSwitch = ref(false);
@@ -136,7 +148,7 @@ const toggleView = () => {
 };
 
 function get_by_range() {
-  if (date_range.value !== []) {
+  if (date_range.value != []) {
     const start_date: string = get_datetime_format(date_range.value[0]);
     const end_date: string = get_datetime_format(date_range.value[1]);
     console.log(start_date, end_date);
@@ -162,12 +174,19 @@ function updateMap() {
   });
 }
 
+function getTime(date: Date) {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+}
+
 onMounted(() => {
   initializeMap();
   updateMap();
-  setInterval(() => {
+  Cron("59 0/15 * * * *", () => {
     updateMap();
-  }, REFRESH_INTERVAL);
+  });
 });
 </script>
 <template>
@@ -178,7 +197,12 @@ onMounted(() => {
   </div>
   -->
   <div ref="mapContainer" class="map-container">
-    <UpdateStatusComponent :date="currentDate" />
+    <UpdateStatusComponent
+      :top="15"
+      :date="currentDate"
+      :content="[`Mapa actualizado a las ${getTime(currentDate)}`]"
+    />
+    <SpeedInfoComponent :colorData="COLOR_DATA" :top="50" />
   </div>
 </template>
 
