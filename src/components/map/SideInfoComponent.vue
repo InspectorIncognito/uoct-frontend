@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 
 defineProps({
   date: Date,
@@ -12,6 +12,12 @@ const show = ref(true);
 function toggleShow() {
   show.value = !show.value;
 }
+
+onMounted(() => {
+  setTimeout(() => {
+    show.value = false;
+  }, 5000);
+});
 </script>
 
 <template>
