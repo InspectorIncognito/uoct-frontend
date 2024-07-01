@@ -36,7 +36,7 @@ const signOut = () => {
             </router-link>
           </el-col>
           <el-col>
-            <router-link to="/about">
+            <router-link to="/historicSpeeds">
               <span class="material-icons"></span>
               <el-button link>
                 <span class="material-icons">arrow_forward_ios</span>

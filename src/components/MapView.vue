@@ -9,8 +9,6 @@ import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
 import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
 import { Cron } from "croner";
 
-const REFRESH_INTERVAL = 15 * 60 * 1000;
-
 const COLOR_DATA = [
   { color: "#FF0000", info: "<= 15 km/h" },
   { color: "#FD8000", info: "15 - 19 km/h" },
@@ -20,6 +18,8 @@ const COLOR_DATA = [
   { color: "#0000FF", info: "> 30 km/h" },
   { color: "#DDDDDD", info: "Sin datos" },
 ];
+
+const TEMPORAL_RANGE = 15;
 
 const style = ref("mapbox://styles/mapbox/dark-v10");
 const elSwitch = ref(false);
@@ -36,8 +36,6 @@ const selectedGeoJsonLayerId = "selected-geojson-layer";
 
 const currentDate = ref(new Date());
 
-const date_range = ref([]);
-
 function initializeMap() {
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
   map.value = new mapboxgl.Map({
@@ -49,19 +47,43 @@ function initializeMap() {
   map.value.dragRotate.disable();
 }
 
+function parseTemporalSegment(idx: number) {
+  if (!idx) return "";
+  const startTime = idx * TEMPORAL_RANGE;
+  const endTime = startTime + TEMPORAL_RANGE;
+
+  const startHours = Math.floor(startTime / 60);
+  const endHours = Math.floor(endTime / 60);
+  const startMinutes = startTime % 60;
+  const endMinutes = endTime % 60;
+
+  const formatTime = (hours: number, minutes: number) => {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+
+  const start = formatTime(startHours, startMinutes);
+  const end = formatTime(endHours, endMinutes);
+
+  return `${start} - ${end}`;
+}
+
 function getPopupContent(feature) {
   return `
     <h3>
     Segmento ${feature.properties.sequence} de Shape(${feature.properties.shape_id})
     </h3>
     <h3>
+    ${parseTemporalSegment(feature.properties.temporal_segment)}
+    </h3>
+
+    <h3>
     ${
       Number(feature.properties.speed) >= 0
         ? `Velocidad: ${Math.round(Number(feature.properties.speed) * 10) / 10} km/h`
         : "No se registró una velocidad"
     }
-
     </h3>
+    <h3>Histórico: ${feature.properties.historic_speed ? feature.properties.historic_speed : "No existe"}</h3>
 `;
 }
 
@@ -141,28 +163,6 @@ async function updateGeoJson() {
   map.value.on("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
 }
 
-const toggleView = () => {
-  elSwitch.value = !elSwitch.value;
-  style.value = elSwitch.value ? "mapbox://styles/mapbox/dark-v10" : "mapbox://styles/mapbox/streets-v12";
-  map.value.setStyle(style.value);
-};
-
-function get_by_range() {
-  if (date_range.value != []) {
-    const start_date: string = get_datetime_format(date_range.value[0]);
-    const end_date: string = get_datetime_format(date_range.value[1]);
-    console.log(start_date, end_date);
-    MapAPI.get_by_range(start_date, end_date, true)
-      .then((response) => {
-        updateMap(response.data);
-        //console.log(mapData.value);
-      })
-      .catch((e) => {
-        console.log(e);
-      });
-  } else console.log("Nada");
-}
-
 function updateMap() {
   updateGeoJson().then(() => {
     currentDate.value = new Date();
@@ -190,12 +190,6 @@ onMounted(() => {
 });
 </script>
 <template>
-  <!--
-  <div class="test-section">
-    <span class="material-icons">bug_report</span>
-    <el-button :onclick="updateMap">Test endpoint</el-button>
-  </div>
-  -->
   <div ref="mapContainer" class="map-container">
     <UpdateStatusComponent
       :top="15"
@@ -207,16 +201,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.test-section {
-  display: flex;
-  flex-direction: row;
-  justify-content: left;
-  align-items: center;
-  position: absolute;
-  top: 0;
-  z-index: 10;
-  color: greenyellow;
-}
 .map-container {
   flex: 1;
   height: 100vh;
