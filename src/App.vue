@@ -1,5 +1,14 @@
 <template>
   <el-container>
+    <el-main>
+      <RouterView />
+    </el-main>
+  </el-container>
+</template>
+
+<!--
+<template>
+  <el-container>
     <el-header>
       <el-row :gutter="5">
         <el-col :span="2" :offset="9">
@@ -28,11 +37,12 @@
     </el-footer>
   </el-container>
 </template>
-
+-->
 <script setup lang="ts">
 import { RouterLink, RouterView, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useI18n } from "vue-i18n";
+import Navigation from "@/components/Navigation.vue";
 
 const { t } = useI18n();
 const authStore = useAuthStore();
@@ -45,3 +55,13 @@ const signOut = () => {
   router.push({ name: "login" });
 };
 </script>
+
+<style>
+html,
+body,
+.el-main {
+  margin: 0;
+  padding: 0 !important;
+  font-family: Roboto, serif;
+}
+</style>
