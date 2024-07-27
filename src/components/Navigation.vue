@@ -45,6 +45,16 @@ const signOut = () => {
               </el-button>
             </router-link>
           </el-col>
+          <el-col>
+            <router-link to="/configuration">
+              <span class="material-icons"></span>
+              <el-button link>
+                <span class="material-icons">arrow_forward_ios</span>
+                <span class="material-icons">settings</span>
+                <div class="section-label">Conf.</div>
+              </el-button>
+            </router-link>
+          </el-col>
         </el-row>
       </div>
     </div>
