@@ -1,8 +1,9 @@
 import APIService from "@/components/api/APIService";
 
 class SpeedAPI {
-  public static getHistoricSpeeds(month: number, dayType: string | boolean) {
-    let slug = `?month=${month}`;
+  public static getHistoricSpeeds(month: number, dayType: string | boolean, page: number) {
+    let slug = `?month=${month}&page=${page}`;
+
     if (dayType !== false) slug += `&dayType=${dayType}`;
     return APIService.get("geo/historicSpeeds", slug);
   }

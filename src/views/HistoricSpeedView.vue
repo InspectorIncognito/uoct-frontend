@@ -67,6 +67,9 @@ const loading = ref(false);
 
 const tableData = ref<HistoricSpeed[]>();
 
+const totalCount = ref<number>(0);
+const currentPage = ref<number>(1);
+const totalPages = ref<number>(1);
 function downloadHistoricSpeeds(month: number, dayType: string | boolean) {
   SpeedAPI.downloadHistoricSpeeds(month, dayType).then((response) => {
     const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -84,18 +87,23 @@ onMounted(() => {
   updateHistoricSpeedData(currentMonth, false);
 });
 
-function updateHistoricSpeedData(month: number, dayType: string | boolean) {
-  if (lastMonth.value === month && lastDayType.value === dayType) {
-    return;
-  }
-
+function updateHistoricSpeedData(month: number, dayType: string | boolean, usePage = true) {
   loading.value = true;
-  SpeedAPI.getHistoricSpeeds(month, dayType)
+  if (!usePage) {
+    currentPage.value = 1;
+  }
+  const page = currentPage.value;
+  SpeedAPI.getHistoricSpeeds(month, dayType, page)
     .then((response) => {
-      response.data.results.forEach((obj) => {
+      response = response.data;
+      const newTotalCount: number = response.count;
+      totalCount.value = newTotalCount;
+      totalPages.value = Math.floor(newTotalCount / 10);
+
+      response.results.forEach((obj) => {
         obj.temporal_segment = parseTemporalSegment(obj.temporal_segment);
       });
-      tableData.value = response.data.results;
+      tableData.value = response.results;
     })
     .catch((e) => {
       console.error(e);
@@ -105,6 +113,17 @@ function updateHistoricSpeedData(month: number, dayType: string | boolean) {
     });
   lastMonth.value = month;
   lastDayType.value = dayType;
+}
+
+function pageUp() {
+  if (currentPage.value == totalPages.value) return;
+  currentPage.value++;
+  updateHistoricSpeedData(monthValue.value, dayTypeValue.value);
+}
+function pageDown() {
+  if (currentPage.value == 1) return;
+  currentPage.value--;
+  updateHistoricSpeedData(monthValue.value, dayTypeValue.value);
 }
 function test(month: number, dayType: string | boolean) {
   console.log("passed month:", month);
@@ -136,7 +155,7 @@ function test(month: number, dayType: string | boolean) {
           </div>
         </div>
 
-        <el-button @click="updateHistoricSpeedData(monthValue, dayTypeValue)">Aplicar filtros</el-button>
+        <el-button @click="updateHistoricSpeedData(monthValue, dayTypeValue, false)">Aplicar filtros</el-button>
       </div>
       <el-table
         v-loading="loading"
@@ -152,6 +171,18 @@ function test(month: number, dayType: string | boolean) {
         <el-table-column sortable prop="day_type" label="Day Type" />
         <el-table-column sortable prop="speed" label="Speed" />
       </el-table>
+      <div class="table-pagination">
+        <span>{{ totalCount }} registros</span>
+        <div class="pagination" v-if="totalPages">
+          <el-button :disabled="currentPage == 1" class="pagination-button" @click="pageDown">
+            <span class="material-icons">chevron_left</span>
+          </el-button>
+          <span>{{ currentPage }} de {{ totalPages }}</span>
+          <el-button :disabled="currentPage == totalPages" class="pagination-button" @click="pageUp">
+            <span class="material-icons">chevron_right</span>
+          </el-button>
+        </div>
+      </div>
     </div>
     <div class="download-container">
       <div class="download-button" @click="downloadHistoricSpeeds(monthValue, dayTypeValue)">
@@ -237,5 +268,28 @@ function test(month: number, dayType: string | boolean) {
 
 .historic-speed-table {
   border-radius: 8px;
+}
+
+.table-pagination {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  width: 60vw;
+  height: 32px;
+}
+
+.pagination {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.pagination-button {
+  background: #31304d;
+  color: white;
 }
 </style>
