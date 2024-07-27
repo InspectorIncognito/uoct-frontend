@@ -3,6 +3,28 @@ import { onMounted, ref } from "vue";
 import SpeedAPI from "@/components/api/SpeedAPI";
 import { getDayType, getDayTypeIndex } from "@/utils/date_utils";
 
+const TEMPORAL_RANGE = 15;
+
+function parseTemporalSegment(idx: number) {
+  if (!idx && idx !== 0) return "";
+  const startTime = idx * TEMPORAL_RANGE;
+  const endTime = startTime + TEMPORAL_RANGE;
+
+  const startHours = Math.floor(startTime / 60);
+  const endHours = Math.floor(endTime / 60);
+  const startMinutes = startTime % 60;
+  const endMinutes = endTime % 60;
+
+  const formatTime = (hours: number, minutes: number) => {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+
+  const start = formatTime(startHours, startMinutes);
+  const end = formatTime(endHours, endMinutes);
+
+  return `${start} - ${end}`;
+}
+
 interface HistoricSpeed {
   shape: number;
   sequence: number;
@@ -64,15 +86,15 @@ onMounted(() => {
 
 function updateHistoricSpeedData(month: number, dayType: string | boolean) {
   if (lastMonth.value === month && lastDayType.value === dayType) {
-    console.log("SAME");
     return;
   }
-  console.log("MONTH IS", month);
-  console.log("DAYTYPE IS", dayType);
 
   loading.value = true;
   SpeedAPI.getHistoricSpeeds(month, dayType)
     .then((response) => {
+      response.data.results.forEach((obj) => {
+        obj.temporal_segment = parseTemporalSegment(obj.temporal_segment);
+      });
       tableData.value = response.data.results;
     })
     .catch((e) => {
