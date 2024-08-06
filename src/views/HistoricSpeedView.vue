@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import SpeedAPI from "@/components/api/SpeedAPI";
-import { getDayType, getDayTypeIndex } from "@/utils/date_utils";
 
 const TEMPORAL_RANGE = 15;
+const temporalSegmentRange = Math.floor(1440 / 15);
 
 function parseTemporalSegment(idx: number) {
   if (!idx && idx !== 0) return "";
@@ -16,6 +16,9 @@ function parseTemporalSegment(idx: number) {
   const endMinutes = endTime % 60;
 
   const formatTime = (hours: number, minutes: number) => {
+    if (hours === 24) {
+      return "23:59";
+    }
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   };
 
@@ -60,6 +63,13 @@ const dayTypeOptions = [
 ];
 const dayTypeValue = ref(dayTypeOptions[dayTypeOptions.length - 1].value);
 
+const temporalSegmentOptions: Array<{ label: string; value: number }> = Array.from(
+  { length: temporalSegmentRange },
+  (_, t) => ({ label: parseTemporalSegment(t), value: t })
+);
+temporalSegmentOptions.unshift({ label: "Todos", value: -1 });
+const selectedTemporalSegment = ref(-1);
+
 const lastMonth = ref();
 const lastDayType = ref();
 
@@ -70,8 +80,8 @@ const tableData = ref<HistoricSpeed[]>();
 const totalCount = ref<number>(0);
 const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
-function downloadHistoricSpeeds(month: number, dayType: string | boolean) {
-  SpeedAPI.downloadHistoricSpeeds(month, dayType).then((response) => {
+function downloadHistoricSpeeds(month: number, dayType: string | boolean, temporalSegment: number) {
+  SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment).then((response) => {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -87,13 +97,13 @@ onMounted(() => {
   updateHistoricSpeedData(currentMonth, false);
 });
 
-function updateHistoricSpeedData(month: number, dayType: string | boolean, usePage = true) {
+function updateHistoricSpeedData(month: number, dayType: string | boolean, temporalSegment = -1, usePage = true) {
   loading.value = true;
   if (!usePage) {
     currentPage.value = 1;
   }
   const page = currentPage.value;
-  SpeedAPI.getHistoricSpeeds(month, dayType, page)
+  SpeedAPI.getHistoricSpeeds(month, dayType, temporalSegment, page)
     .then((response) => {
       response = response.data;
       const newTotalCount: number = response.count;
@@ -118,12 +128,12 @@ function updateHistoricSpeedData(month: number, dayType: string | boolean, usePa
 function pageUp() {
   if (currentPage.value == totalPages.value) return;
   currentPage.value++;
-  updateHistoricSpeedData(monthValue.value, dayTypeValue.value);
+  updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
 }
 function pageDown() {
   if (currentPage.value == 1) return;
   currentPage.value--;
-  updateHistoricSpeedData(monthValue.value, dayTypeValue.value);
+  updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
 }
 function test(month: number, dayType: string | boolean) {
   console.log("passed month:", month);
@@ -153,9 +163,22 @@ function test(month: number, dayType: string | boolean) {
               <el-option v-for="item in dayTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </div>
+          <div class="option-container">
+            <span>Segmento temporal</span>
+            <el-select v-model="selectedTemporalSegment" placeholder="Select" style="width: 240px">
+              <el-option
+                v-for="item in temporalSegmentOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </div>
         </div>
 
-        <el-button @click="updateHistoricSpeedData(monthValue, dayTypeValue, false)">Aplicar filtros</el-button>
+        <el-button @click="updateHistoricSpeedData(monthValue, dayTypeValue, selectedTemporalSegment, false)"
+          >Aplicar filtros</el-button
+        >
       </div>
       <el-table
         v-loading="loading"
@@ -185,7 +208,7 @@ function test(month: number, dayType: string | boolean) {
       </div>
     </div>
     <div class="download-container">
-      <div class="download-button" @click="downloadHistoricSpeeds(monthValue, dayTypeValue)">
+      <div class="download-button" @click="downloadHistoricSpeeds(monthValue, dayTypeValue, selectedTemporalSegment)">
         <div class="download-label">Descargar</div>
         <span class="material-icons">download</span>
       </div>
