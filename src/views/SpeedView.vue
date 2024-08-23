@@ -3,20 +3,20 @@ import { onMounted, ref } from "vue";
 import SpeedAPI from "@/components/api/SpeedAPI";
 import { parseTemporalSegment, monthOptions, dayTypeOptions, temporalSegmentRange } from "@/utils/date_utils";
 
-interface HistoricSpeed {
+interface Speed {
   shape: number;
   sequence: number;
-  temporal_segment: number;
-  day_type: string;
-  speed: number;
+  temporalSegment: number;
+  dayType: string;
+  distance: number;
+  timeSecs: number;
 }
 
 const currentDate = new Date();
 const currentMonth = currentDate.getMonth() + 1;
-const month_string = currentDate.toLocaleString("default", { month: "long" });
+const monthString = currentDate.toLocaleString("default", { month: "long" });
 
 const monthValue = ref(monthOptions[currentMonth - 1].value);
-
 const dayTypeValue = ref(dayTypeOptions[dayTypeOptions.length - 1].value);
 
 const temporalSegmentOptions: Array<{ label: string; value: number }> = Array.from(
@@ -28,20 +28,19 @@ const selectedTemporalSegment = ref(-1);
 
 const lastMonth = ref();
 const lastDayType = ref();
-
 const loading = ref(false);
 
-const tableData = ref<HistoricSpeed[]>();
-
+const tableData = ref<Speed[]>();
 const totalCount = ref<number>(0);
 const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
-function downloadHistoricSpeeds(month: number, dayType: string | boolean, temporalSegment: number) {
-  SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment).then((response) => {
+
+function downloadSpeeds(month: number, dayType: string | boolean, temporalSegment: number) {
+  SpeedAPI.downloadSpeeds(month, dayType, temporalSegment).then((response) => {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `historic_speed_${month_string}.csv`);
+    link.setAttribute("download", `speed_${monthString}.csv`);
     document.body.appendChild(link);
     link.click();
     link.parentNode.removeChild(link);
@@ -49,17 +48,13 @@ function downloadHistoricSpeeds(month: number, dayType: string | boolean, tempor
   });
 }
 
-onMounted(() => {
-  updateHistoricSpeedData(currentMonth, false);
-});
-
-function updateHistoricSpeedData(month: number, dayType: string | boolean, temporalSegment = -1, usePage = true) {
+function updateSpeedData(month: number, dayType: string | boolean, temporalSegment = -1, usePage = true) {
   loading.value = true;
   if (!usePage) {
     currentPage.value = 1;
   }
   const page = currentPage.value;
-  SpeedAPI.getHistoricSpeeds(month, dayType, temporalSegment, page)
+  SpeedAPI.getSpeeds(month, dayType, temporalSegment, page)
     .then((response) => {
       response = response.data;
       const newTotalCount: number = response.count;
@@ -84,22 +79,17 @@ function updateHistoricSpeedData(month: number, dayType: string | boolean, tempo
 function pageUp() {
   if (currentPage.value == totalPages.value) return;
   currentPage.value++;
-  updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
+  updateSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
 }
 function pageDown() {
   if (currentPage.value == 1) return;
   currentPage.value--;
-  updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
+  updateSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
 }
-function test(month: number, dayType: string | boolean) {
-  console.log("passed month:", month);
-  console.log("passed daytype", dayType);
-  console.log(" ");
-  console.log("last month:", lastMonth.value);
-  console.log("last daytype:", lastDayType.value);
-  lastMonth.value = month;
-  lastDayType.value = dayType;
-}
+
+onMounted(() => {
+  updateSpeedData(currentMonth, false);
+});
 </script>
 
 <template>
@@ -132,7 +122,7 @@ function test(month: number, dayType: string | boolean) {
           </div>
         </div>
 
-        <el-button @click="updateHistoricSpeedData(monthValue, dayTypeValue, selectedTemporalSegment, false)"
+        <el-button @click="updateSpeedData(monthValue, dayTypeValue, selectedTemporalSegment, false)"
           >Aplicar filtros</el-button
         >
       </div>
@@ -148,7 +138,8 @@ function test(month: number, dayType: string | boolean) {
         <el-table-column sortable prop="sequence" label="Sequence" />
         <el-table-column sortable prop="temporal_segment" label="Temporal Segment" />
         <el-table-column sortable prop="day_type" label="Day Type" />
-        <el-table-column sortable prop="speed" label="Speed" />
+        <el-table-column sortable prop="distance" label="Distance" />
+        <el-table-column sortable prop="time_secs" label="Time secs" />
       </el-table>
       <div class="table-pagination">
         <span>{{ totalCount }} registros</span>
@@ -164,7 +155,7 @@ function test(month: number, dayType: string | boolean) {
       </div>
     </div>
     <div class="download-container">
-      <div class="download-button" @click="downloadHistoricSpeeds(monthValue, dayTypeValue, selectedTemporalSegment)">
+      <div class="download-button" @click="downloadSpeeds(monthValue, dayTypeValue, selectedTemporalSegment)">
         <div class="download-label">Descargar</div>
         <span class="material-icons">download</span>
       </div>
