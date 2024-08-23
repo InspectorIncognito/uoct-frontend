@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Navigation from "@/components/Navigation.vue";
+import NavigationComponent from "@/components/NavigationComponent.vue";
 import { RouterView, useRouter } from "vue-router";
 import { onMounted } from "vue";
 
@@ -11,7 +11,7 @@ onMounted(() => {
 
 <template>
   <el-container>
-    <el-aside width="200px"><Navigation /></el-aside>
+    <el-aside width="200px"><NavigationComponent /></el-aside>
     <el-main><RouterView /></el-main>
   </el-container>
 </template>
