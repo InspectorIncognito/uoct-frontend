@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { FORM_URL } from "@/config";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -36,14 +37,41 @@ const signOut = () => {
             </router-link>
           </el-col>
           <el-col>
+            <router-link to="/speeds">
+              <el-button link>
+                <span class="material-icons">arrow_forward_ios</span>
+                <span class="material-icons">query_stats</span>
+                <div class="section-label">Velocidades</div>
+              </el-button>
+            </router-link>
+          </el-col>
+          <el-col>
             <router-link to="/historicSpeeds">
-              <span class="material-icons"></span>
               <el-button link>
                 <span class="material-icons">arrow_forward_ios</span>
                 <span class="material-icons">query_stats</span>
                 <div class="section-label">Histórico</div>
               </el-button>
             </router-link>
+          </el-col>
+
+          <el-col>
+            <router-link to="/configuration">
+              <el-button link>
+                <span class="material-icons">arrow_forward_ios</span>
+                <span class="material-icons">settings</span>
+                <div class="section-label">Conf.</div>
+              </el-button>
+            </router-link>
+          </el-col>
+          <el-col>
+            <a :href="FORM_URL" target="_blank">
+              <el-button link>
+                <span class="material-icons">arrow_forward_ios</span>
+                <span class="material-icons">priority_high</span>
+                <div class="section-label">Alertas</div>
+              </el-button>
+            </a>
           </el-col>
         </el-row>
       </div>
@@ -52,67 +80,10 @@ const signOut = () => {
       <el-button @click="signOut" link>
         <span class="material-icons">logout</span>
       </el-button>
-      <!--
-      <el-button link>
-        <span class="material-icons material-icons-filled">dark_mode</span>
-      </el-button>
-      -->
     </div>
   </div>
 </template>
 
-<!--
-<template>
-  <div class="navigation">
-    <div class="navigation-up">
-      <el-row class="navigation-top">
-        <div class="section">
-          <div class="title"></div>
-          <span class="material-icons">near_me</span>
-        </div>
-        <el-button size="small" link class="back">
-          <span class="material-icons">arrow_back_ios</span>
-        </el-button>
-      </el-row>
-      <el-col class="navigation-body">
-        <el-row class="navigation-section">
-          <el-col>
-            <router-link to="/">
-              <el-button link id="map">
-                <span class="material-icons">arrow_forward_ios</span>
-                <span class="material-icons">map</span>
-                <div class="section-label">Mapa</div>
-              </el-button>
-            </router-link>
-          </el-col>
-          <el-col>
-            <router-link to="/about">
-              <span class="material-icons"></span>
-              <el-button link>
-                <span class="material-icons">arrow_forward_ios</span>
-                <span class="material-icons">query_stats</span>
-                <div class="section-label">Histórico</div>
-              </el-button>
-            </router-link>
-          </el-col>
-        </el-row>
-      </el-col>
-    </div>
-    <el-col class="navigation-footer">
-      <el-col :span="12">
-        <el-button link>
-          <span class="material-icons">logout</span>
-        </el-button>
-      </el-col>
-      <el-col :span="12">
-        <el-button link>
-          <span class="material-icons material-icons-filled">dark_mode</span>
-        </el-button>
-      </el-col>
-    </el-col>
-  </div>
-</template>
--->
 <style scoped>
 .navigation {
   font-family: "Inter", sans-serif;

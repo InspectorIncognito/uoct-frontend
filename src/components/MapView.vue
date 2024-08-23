@@ -10,8 +10,10 @@ import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
 import { Cron } from "croner";
 
 const COLOR_DATA = [
-  { color: "#FF0000", info: "<= 15 km/h" },
-  { color: "#FD8000", info: "15 - 19 km/h" },
+  { color: "#FF0000", info: "< 5 km/h" },
+  { color: "#FF4000", info: "5 - 10 km/h" },
+  { color: "#FF8000", info: "10 - 15 km/h" },
+  { color: "#FFD700", info: "15 - 19 km/h" },
   { color: "#FFFF00", info: "19 - 21 km/h" },
   { color: "#02FE02", info: "21 - 25 km/h" },
   { color: "#008000", info: "25 - 30 km/h" },

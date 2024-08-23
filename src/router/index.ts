@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
 import { useAuthStore } from "@/stores/auth";
 import MainView from "@/views/MainView.vue";
 
@@ -17,9 +16,19 @@ const router = createRouter({
           component: () => import("../components/MapView.vue"),
         },
         {
+          path: "/speeds",
+          name: "speeds",
+          component: () => import("../views/SpeedView.vue"),
+        },
+        {
           path: "/historicSpeeds",
           name: "historicSpeed",
           component: () => import("../views/HistoricSpeedView.vue"),
+        },
+        {
+          path: "/configuration",
+          name: "configuration",
+          component: () => import("../views/Configuration.vue"),
         },
       ],
     },
