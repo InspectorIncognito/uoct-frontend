@@ -43,7 +43,7 @@ function saveThreshold() {
         <span>Alert Threshold</span>
         <el-input v-model="threshold" class="threshold-input" />
         <el-button @click="saveThreshold">Actualizar</el-button>
-        <span>Fórmula: {{ threshold }} * speed &lt; historic_speed</span>
+        <span>Fórmula: speed &lt; historic_speed / {{ threshold }}</span>
       </div>
     </div>
   </div>

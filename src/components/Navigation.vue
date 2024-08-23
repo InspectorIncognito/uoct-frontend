@@ -36,6 +36,16 @@ const signOut = () => {
             </router-link>
           </el-col>
           <el-col>
+            <router-link to="/speeds">
+              <span class="material-icons"></span>
+              <el-button link>
+                <span class="material-icons">arrow_forward_ios</span>
+                <span class="material-icons">query_stats</span>
+                <div class="section-label">Velocidades</div>
+              </el-button>
+            </router-link>
+          </el-col>
+          <el-col>
             <router-link to="/historicSpeeds">
               <span class="material-icons"></span>
               <el-button link>
@@ -45,6 +55,7 @@ const signOut = () => {
               </el-button>
             </router-link>
           </el-col>
+
           <el-col>
             <router-link to="/configuration">
               <span class="material-icons"></span>

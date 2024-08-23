@@ -16,6 +16,11 @@ const router = createRouter({
           component: () => import("../components/MapView.vue"),
         },
         {
+          path: "/speeds",
+          name: "speeds",
+          component: () => import("../views/SpeedView.vue"),
+        },
+        {
           path: "/historicSpeeds",
           name: "historicSpeed",
           component: () => import("../views/HistoricSpeedView.vue"),
