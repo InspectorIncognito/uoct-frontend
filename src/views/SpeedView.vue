@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, Ref } from "vue";
+import { onMounted, ref } from "vue";
 import SpeedAPI from "@/components/api/SpeedAPI";
 import { parseTemporalSegment, monthOptions, dayTypeOptions, temporalSegmentRange } from "@/utils/date_utils";
 
