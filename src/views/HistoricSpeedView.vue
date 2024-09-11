@@ -36,6 +36,7 @@ const tableData = ref<HistoricSpeed[]>();
 const totalCount = ref<number>(0);
 const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
+
 function downloadHistoricSpeeds(month: number, dayType: string | boolean, temporalSegment: number) {
   SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment).then((response) => {
     const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -86,11 +87,13 @@ function pageUp() {
   currentPage.value++;
   updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
 }
+
 function pageDown() {
   if (currentPage.value == 1) return;
   currentPage.value--;
   updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
 }
+
 function test(month: number, dayType: string | boolean) {
   console.log("passed month:", month);
   console.log("passed daytype", dayType);
@@ -104,6 +107,9 @@ function test(month: number, dayType: string | boolean) {
 
 <template>
   <div class="table-view">
+    <div class="table-section-header">
+      <span>Velocidades Agregadas</span>
+    </div>
     <div class="table-container">
       <div class="table-buttons-container">
         <div class="options-section">
@@ -133,8 +139,8 @@ function test(month: number, dayType: string | boolean) {
         </div>
 
         <el-button @click="updateHistoricSpeedData(monthValue, dayTypeValue, selectedTemporalSegment, false)"
-          >Aplicar filtros</el-button
-        >
+          >Aplicar filtros
+        </el-button>
       </div>
       <el-table
         v-loading="loading"
@@ -178,11 +184,13 @@ function test(month: number, dayType: string | boolean) {
   flex-direction: row;
   gap: 8px;
 }
+
 .option-container {
   display: flex;
   flex-direction: column;
   justify-content: left;
 }
+
 .table-buttons-container {
   display: flex;
   flex-direction: row;
@@ -270,5 +278,16 @@ function test(month: number, dayType: string | boolean) {
 .pagination-button {
   background: #31304d;
   color: white;
+}
+
+.table-section-header {
+  display: flex;
+  background: #31304d;
+  height: 88px;
+  color: white;
+  font-family: Roboto, sans-serif;
+  align-items: center;
+  padding-left: 16px;
+  font-size: 36px;
 }
 </style>
