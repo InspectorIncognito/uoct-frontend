@@ -50,7 +50,7 @@ const signOut = () => {
               <el-button link>
                 <span class="material-icons">arrow_forward_ios</span>
                 <span class="material-icons">query_stats</span>
-                <div class="section-label">Histórico</div>
+                <div class="section-label">Vel. Mensual</div>
               </el-button>
             </router-link>
           </el-col>

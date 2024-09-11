@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, Ref } from "vue";
 import SpeedAPI from "@/components/api/SpeedAPI";
 import { parseTemporalSegment, monthOptions, dayTypeOptions, temporalSegmentRange } from "@/utils/date_utils";
 
@@ -10,7 +10,13 @@ interface Speed {
   dayType: string;
   distance: number;
   timeSecs: number;
+  timestamp: number;
 }
+const today = new Date();
+const dateTimeValue = ref([
+  new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0),
+  new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59),
+]);
 
 const currentDate = new Date();
 const currentMonth = currentDate.getMonth() + 1;
@@ -53,8 +59,11 @@ function updateSpeedData(month: number, dayType: string | boolean, temporalSegme
   if (!usePage) {
     currentPage.value = 1;
   }
+  const startTime = new Date(dateTimeValue.value[0]);
+  const endTime = new Date(dateTimeValue.value[1]);
+  console.log(startTime, endTime);
   const page = currentPage.value;
-  SpeedAPI.getSpeeds(month, dayType, temporalSegment, page)
+  SpeedAPI.getSpeeds(startTime, endTime, dayType, temporalSegment, page)
     .then((response) => {
       response = response.data;
       const newTotalCount: number = response.count;
@@ -90,18 +99,29 @@ function pageDown() {
 onMounted(() => {
   updateSpeedData(currentMonth, false);
 });
+
+function test() {
+  console.log(dateTimeValue.value);
+}
 </script>
 
 <template>
   <div class="table-view">
+    <div class="table-section-header">
+      <span>Velocidades registradas</span>
+    </div>
     <div class="table-container">
       <div class="table-buttons-container">
         <div class="options-section">
           <div class="option-container">
-            <span>Mes</span>
-            <el-select v-model="monthValue" placeholder="Select" style="width: 240px">
-              <el-option v-for="item in monthOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
+            <span>Fecha</span>
+            <el-date-picker
+              v-model="dateTimeValue"
+              type="datetimerange"
+              start-placeholder="Fecha inicio"
+              end-placeholder="Fecha fin"
+              :clearable="false"
+            />
           </div>
           <div class="option-container">
             <span>Tipo de día</span>
@@ -140,6 +160,7 @@ onMounted(() => {
         <el-table-column sortable prop="day_type" label="Day Type" />
         <el-table-column sortable prop="distance" label="Distance" />
         <el-table-column sortable prop="time_secs" label="Time secs" />
+        <el-table-column sortable prop="timestamp" label="timestamp" />
       </el-table>
       <div class="table-pagination">
         <span>{{ totalCount }} registros</span>
@@ -261,5 +282,16 @@ onMounted(() => {
 .pagination-button {
   background: #31304d;
   color: white;
+}
+
+.table-section-header {
+  display: flex;
+  background: #31304d;
+  height: 88px;
+  color: white;
+  font-family: Roboto, sans-serif;
+  align-items: center;
+  padding-left: 16px;
+  font-size: 36px;
 }
 </style>
