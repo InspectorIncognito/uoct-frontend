@@ -3,11 +3,17 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { onMounted, ref } from "vue";
 import MapAPI from "@/components/api/MapAPI";
-import { get_datetime_format } from "@/utils/gps_utils";
 import { ElNotification } from "element-plus";
 import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
 import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
 import { Cron } from "croner";
+
+interface AlertData {
+  coords: number[];
+  key_value: string;
+  useful: number;
+  useless: number;
+}
 
 const COLOR_DATA = [
   { color: "#FF0000", info: "< 5 km/h" },
@@ -24,7 +30,6 @@ const COLOR_DATA = [
 const TEMPORAL_RANGE = 15;
 
 const style = ref("mapbox://styles/mapbox/dark-v10");
-const elSwitch = ref(false);
 
 const mapContainer = ref<HTMLElement>();
 const map = ref(null);
@@ -37,6 +42,8 @@ const selectedGeoJsonSourceId = "selected-geojson-source";
 const selectedGeoJsonLayerId = "selected-geojson-layer";
 
 const currentDate = ref(new Date());
+
+const markerList = ref([]);
 
 function initializeMap() {
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -108,11 +115,15 @@ function onFeatureClick(e) {
 function onMouseEnterFeature() {
   map.value.getCanvas().style.cursor = "pointer";
 }
+
 function onMouseLeaveFeature() {
   map.value.getCanvas().style.cursor = "";
 }
+
 async function updateGeoJson() {
   const response = await MapAPI.getMapData();
+  const geojsonData = response.data.geojson;
+  const alertData = response.data.alerts;
 
   if (map.value && map.value.getSource(geoJsonSourceId)) {
     map.value.removeLayer(geoJsonLayerId);
@@ -121,7 +132,7 @@ async function updateGeoJson() {
 
   map.value.addSource(geoJsonSourceId, {
     type: "geojson",
-    data: response.data,
+    data: geojsonData,
   });
 
   map.value.addLayer({
@@ -146,27 +157,21 @@ async function updateGeoJson() {
         features: [],
       },
     });
-
-    /*
-    map.value.addLayer({
-      id: selectedGeoJsonLayerId,
-      type: "line",
-      source: selectedGeoJsonSourceId,
-      paint: {
-        "line-color": "#ff0000",
-        "line-width": 5,
-      },
-    });
-     */
   }
   currentGeoJson.value = response.data;
   map.value.on("click", geoJsonLayerId, onFeatureClick);
   map.value.on("mouseenter", geoJsonLayerId, onMouseEnterFeature);
   map.value.on("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
+
+  alertData.forEach((data) => {
+    createMarker(data);
+  });
 }
 
 function updateMap() {
+  clearMarkers();
   updateGeoJson().then(() => {
+    showMarkers();
     currentDate.value = new Date();
     ElNotification({
       title: "Alerta",
@@ -181,6 +186,68 @@ function getTime(date: Date) {
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${hours}:${minutes}:${seconds}`;
+}
+
+function hideMarker(marker) {
+  marker.remove();
+}
+
+function showMarker(marker) {
+  marker.addTo(map.value);
+}
+
+function createPopup(alertData: AlertData, marker) {
+  const keyValue = alertData.key_value;
+  const coords = alertData.coords;
+  const useful = alertData.useful;
+  const useless = alertData.useless;
+
+  const popup = new mapboxgl.Popup({
+    closeButton: true,
+    closeOnClick: false,
+  })
+    .setLngLat(coords)
+    .setHTML(
+      "<div class='popup-title'><h1>Alerta de anomalía</h1>" +
+        `<span class='key-value'>${keyValue}</span></div>` +
+        "<div class='metrics-container'>" +
+        "<div class='metric'>" +
+        "<span class='material-icons' style='color:green'>thumb_up</span>" +
+        `<span>${useful}</span>` +
+        "</div>" +
+        "<div class='metric'>" +
+        "<span class='material-icons' style='color:red'>thumb_down</span>" +
+        `<span>${useless}</span>` +
+        "</div>" +
+        "</div>"
+    );
+  hideMarker(marker);
+  popup.addTo(map.value);
+  popup.on("close", () => {
+    showMarker(marker);
+  });
+}
+
+function createMarker(alertData: AlertData) {
+  const coords = alertData.coords;
+  const marker = new mapboxgl.Marker({ color: "#FF4000" }).setLngLat(coords);
+  marker.getElement().addEventListener("click", () => {
+    createPopup(alertData, marker);
+  });
+  markerList.value.push(marker);
+}
+
+function showMarkers() {
+  markerList.value.forEach((marker) => {
+    marker.addTo(map.value);
+  });
+}
+
+function clearMarkers() {
+  markerList.value.forEach((marker) => {
+    marker.getElement().remove();
+  });
+  markerList.value = [];
 }
 
 onMounted(() => {

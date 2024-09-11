@@ -1,7 +1,8 @@
 import APIService from "@/components/api/APIService";
+import { parseDateObject } from "@/utils/date_utils";
 
 class SpeedAPI {
-  public static getList(
+  public static getListByMonth(
     month: number,
     dayType: string | boolean,
     temporalSegment: number,
@@ -14,12 +15,34 @@ class SpeedAPI {
     return APIService.get(endpoint, slug);
   }
 
-  public static getSpeeds(month: number, dayType: string | boolean, temporalSegment: number, page: number) {
-    return this.getList(month, dayType, temporalSegment, page, "geo/speeds");
+  public static getListByDates(
+    startTime: string,
+    endTime: string,
+    dayType: string | boolean,
+    temporalSegment: number,
+    page: number,
+    endpoint: string
+  ) {
+    let slug = `?startTime=${startTime}&endTime=${endTime}&page=${page}`;
+    if (dayType !== false) slug += `&dayType=${dayType}`;
+    if (temporalSegment !== -1) slug += `&temporalSegment=${temporalSegment}`;
+    return APIService.get(endpoint, slug);
+  }
+
+  public static getSpeeds(
+    startTime: Date,
+    endTime: Date,
+    dayType: string | boolean,
+    temporalSegment: number,
+    page: number
+  ) {
+    const parsedStartTime = parseDateObject(startTime);
+    const parsedEndTime = parseDateObject(endTime);
+    return this.getListByDates(parsedStartTime, parsedEndTime, dayType, temporalSegment, page, "geo/speeds");
   }
 
   public static getHistoricSpeeds(month: number, dayType: string | boolean, temporalSegment: number, page: number) {
-    return this.getList(month, dayType, temporalSegment, page, "geo/historicSpeeds");
+    return this.getListByMonth(month, dayType, temporalSegment, page, "geo/historicSpeeds");
   }
 
   public static downloadCSV(month: number, dayType: string | boolean, temporalSegment: number, endpoint: string) {
