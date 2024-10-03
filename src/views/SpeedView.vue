@@ -12,6 +12,7 @@ interface Speed {
   timeSecs: number;
   timestamp: number;
 }
+
 const today = new Date();
 const dateTimeValue = ref([
   new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0),
@@ -22,7 +23,6 @@ const currentDate = new Date();
 const currentMonth = currentDate.getMonth() + 1;
 const monthString = currentDate.toLocaleString("default", { month: "long" });
 
-const monthValue = ref(monthOptions[currentMonth - 1].value);
 const dayTypeValue = ref(dayTypeOptions[dayTypeOptions.length - 1].value);
 
 const temporalSegmentOptions: Array<{ label: string; value: number }> = Array.from(
@@ -32,7 +32,6 @@ const temporalSegmentOptions: Array<{ label: string; value: number }> = Array.fr
 temporalSegmentOptions.unshift({ label: "Todos", value: -1 });
 const selectedTemporalSegment = ref(-1);
 
-const lastMonth = ref();
 const lastDayType = ref();
 const loading = ref(false);
 
@@ -41,8 +40,10 @@ const totalCount = ref<number>(0);
 const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
 
-function downloadSpeeds(month: number, dayType: string | boolean, temporalSegment: number) {
-  SpeedAPI.downloadSpeeds(month, dayType, temporalSegment).then((response) => {
+function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
+  const startTime = new Date(dateTimeValue.value[0]);
+  const endTime = new Date(dateTimeValue.value[1]);
+  SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment).then((response) => {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -54,14 +55,13 @@ function downloadSpeeds(month: number, dayType: string | boolean, temporalSegmen
   });
 }
 
-function updateSpeedData(month: number, dayType: string | boolean, temporalSegment = -1, usePage = true) {
+function updateSpeedData(dayType: string | boolean, temporalSegment = -1, usePage = true) {
   loading.value = true;
   if (!usePage) {
     currentPage.value = 1;
   }
   const startTime = new Date(dateTimeValue.value[0]);
   const endTime = new Date(dateTimeValue.value[1]);
-  console.log(startTime, endTime);
   const page = currentPage.value;
   SpeedAPI.getSpeeds(startTime, endTime, dayType, temporalSegment, page)
     .then((response) => {
@@ -81,28 +81,24 @@ function updateSpeedData(month: number, dayType: string | boolean, temporalSegme
     .finally(() => {
       loading.value = false;
     });
-  lastMonth.value = month;
   lastDayType.value = dayType;
 }
 
 function pageUp() {
   if (currentPage.value == totalPages.value) return;
   currentPage.value++;
-  updateSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
+  updateSpeedData(dayTypeValue.value, selectedTemporalSegment.value);
 }
+
 function pageDown() {
   if (currentPage.value == 1) return;
   currentPage.value--;
-  updateSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
+  updateSpeedData(dayTypeValue.value, selectedTemporalSegment.value);
 }
 
 onMounted(() => {
-  updateSpeedData(currentMonth, false);
+  updateSpeedData(false);
 });
-
-function test() {
-  console.log(dateTimeValue.value);
-}
 </script>
 
 <template>
@@ -142,9 +138,7 @@ function test() {
           </div>
         </div>
 
-        <el-button @click="updateSpeedData(monthValue, dayTypeValue, selectedTemporalSegment, false)"
-          >Aplicar filtros</el-button
-        >
+        <el-button @click="updateSpeedData(dayTypeValue, selectedTemporalSegment, false)">Aplicar filtros</el-button>
       </div>
       <el-table
         v-loading="loading"
@@ -176,7 +170,7 @@ function test() {
       </div>
     </div>
     <div class="download-container">
-      <div class="download-button" @click="downloadSpeeds(monthValue, dayTypeValue, selectedTemporalSegment)">
+      <div class="download-button" @click="downloadSpeeds(dayTypeValue, selectedTemporalSegment)">
         <div class="download-label">Descargar</div>
         <span class="material-icons">download</span>
       </div>
@@ -190,11 +184,13 @@ function test() {
   flex-direction: row;
   gap: 8px;
 }
+
 .option-container {
   display: flex;
   flex-direction: column;
   justify-content: left;
 }
+
 .table-buttons-container {
   display: flex;
   flex-direction: row;

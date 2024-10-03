@@ -93,16 +93,6 @@ function pageDown() {
   currentPage.value--;
   updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
 }
-
-function test(month: number, dayType: string | boolean) {
-  console.log("passed month:", month);
-  console.log("passed daytype", dayType);
-  console.log(" ");
-  console.log("last month:", lastMonth.value);
-  console.log("last daytype:", lastDayType.value);
-  lastMonth.value = month;
-  lastDayType.value = dayType;
-}
 </script>
 
 <template>
