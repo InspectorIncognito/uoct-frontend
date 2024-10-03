@@ -41,8 +41,6 @@ const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
 
 function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
-  console.log("dayType", dayType);
-  console.log("temporalSegment", temporalSegment);
   const startTime = new Date(dateTimeValue.value[0]);
   const endTime = new Date(dateTimeValue.value[1]);
   SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment).then((response) => {
@@ -101,10 +99,6 @@ function pageDown() {
 onMounted(() => {
   updateSpeedData(false);
 });
-
-function test() {
-  console.log(dateTimeValue.value);
-}
 </script>
 
 <template>
