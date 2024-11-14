@@ -240,7 +240,7 @@ onMounted(() => {
 .table-view {
   display: flex;
   flex-direction: column;
-  background: #343332;
+  background: #161a30;
   height: 100%;
   width: 100%;
 }
@@ -283,11 +283,11 @@ onMounted(() => {
 .table-section-header {
   display: flex;
   background: #31304d;
-  height: 88px;
+  height: 10vh;
   color: white;
   font-family: Roboto, sans-serif;
+  font-size: 2vw;
   align-items: center;
   padding-left: 16px;
-  font-size: 36px;
 }
 </style>

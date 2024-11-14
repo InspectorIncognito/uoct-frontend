@@ -21,15 +21,15 @@ defineProps<{ colorData: ColorData[]; top: number }>();
 
 <style scoped>
 .speed-data {
+  width: 70%;
   display: flex;
   flex-direction: row;
-  padding-left: 16px;
-  justify-content: center;
+  padding: 0 16px;
   align-items: center;
   gap: 16px;
-  text-align: right;
+  justify-content: space-between;
 }
 .speed-label {
-  width: 180px;
+  display: flex;
 }
 </style>
