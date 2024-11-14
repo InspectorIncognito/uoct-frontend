@@ -46,6 +46,7 @@ const signOut = () => {
   display: flex;
   flex-direction: row;
   align-items: center;
+  height: 10vh;
   border-bottom: 1px solid #606266;
   padding: 8px 0 8px 8px;
 }
