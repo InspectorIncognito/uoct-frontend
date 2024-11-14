@@ -88,7 +88,7 @@ function getPopupContent(feature) {
     <h3>
     ${
       Number(feature.properties.speed) >= 0
-        ? `Velocidad: ${Math.round(Number(feature.properties.speed) * 10) / 10} km/h`
+        ? `Velocidad: ${Number(feature.properties.speed)} km/h`
         : "No se registró una velocidad"
     }
     </h3>
@@ -260,12 +260,8 @@ onMounted(() => {
 </script>
 <template>
   <div ref="mapContainer" class="map-container">
-    <UpdateStatusComponent
-      :top="15"
-      :date="currentDate"
-      :content="[`Mapa actualizado a las ${getTime(currentDate)}`]"
-    />
-    <SpeedInfoComponent :colorData="COLOR_DATA" :top="50" />
+    <UpdateStatusComponent :top="5" :date="currentDate" :content="[`Mapa actualizado a las ${getTime(currentDate)}`]" />
+    <SpeedInfoComponent :colorData="COLOR_DATA" :top="30" />
   </div>
 </template>
 
