@@ -23,8 +23,8 @@ onMounted(() => {
 <template>
   <div class="update-status-container" :style="`top: ${top}vh;`" :class="show ? 'show' : 'hide'">
     <span class="material-icons update-status-button" @click="toggleShow">
-      {{ show ? "chevron_right" : "chevron_left" }}</span
-    >
+      {{ show ? "chevron_right" : "chevron_left" }}
+    </span>
     <div class="update-status">
       <slot></slot>
     </div>
@@ -34,7 +34,7 @@ onMounted(() => {
 <style scoped>
 @keyframes slideIn {
   0% {
-    right: -400px; /* Offscreen */
+    right: -25vw; /* Offscreen */
   }
   100% {
     right: 0; /* Final position */
@@ -46,7 +46,7 @@ onMounted(() => {
     right: 0; /* Final position */
   }
   100% {
-    right: -400px; /* Offscreen */
+    right: -25vw; /* Offscreen */
   }
 }
 .update-status-container {
@@ -63,7 +63,7 @@ onMounted(() => {
   animation: slideIn 0.5s forwards;
 }
 .update-status-container.hide {
-  right: -400px;
+  right: -25vw;
   animation: slideOut 0.5s forwards;
 }
 
@@ -72,9 +72,9 @@ onMounted(() => {
   color: white;
   background: #31304d;
   font-family: Inter, serif;
-  font-size: 24px;
-  min-height: 64px;
-  width: 400px;
+  font-size: 1.2vw;
+  min-height: 6vh;
+  width: 25vw;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -83,7 +83,7 @@ onMounted(() => {
   padding: 16px 0;
 }
 .update-status-button {
-  font-size: 36px;
+  font-size: 2vw;
   cursor: pointer;
   user-select: none;
   color: white;

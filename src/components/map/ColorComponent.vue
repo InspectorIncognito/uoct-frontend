@@ -10,7 +10,7 @@ defineProps({
 
 <style scoped>
 .color-component {
-  height: 24px;
-  width: 98px;
+  height: 3vh;
+  width: 5vw;
 }
 </style>

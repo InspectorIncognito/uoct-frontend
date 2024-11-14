@@ -12,9 +12,9 @@ const show = ref(true);
 </script>
 
 <template>
-  <SideInfoComponent :top="top"
-    ><div class="update-message" v-for="(elem, idx) of content" :key="idx">{{ elem }}</div></SideInfoComponent
-  >
+  <SideInfoComponent :top="top">
+    <div class="update-message" v-for="(elem, idx) of content" :key="idx">{{ elem }}</div>
+  </SideInfoComponent>
 </template>
 
 <style scoped>
