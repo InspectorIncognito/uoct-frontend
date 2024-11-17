@@ -1,6 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
 
-@media (width >= 1024px) {
+@media (width >= 512px) {
     body {
         display: flex;
         place-items: center;
@@ -15,6 +15,7 @@
 
 
     .metrics-container {
+        margin-top: 8px;
         display: flex;
         gap: 16px;
         flex-direction: row;
@@ -42,4 +43,57 @@
         font-weight: bold;
         font-size: 16px;
     }
+    .custom-popup .mapboxgl-popup-content {
+        border: 1px solid #161a30;
+        border-radius: 8px;
+        background-color: #31304d ;
+        color: #b6bbc4;
+    }
+    .custom-popup .mapboxgl-popup-tip{
+        border-top-color: #b6bbc4 !important;
+    }
+    .custom-popup .mapboxgl-popup-content .mapboxgl-popup-close-button {
+        color: #b6bbc4;
+        transition: color 0.2s ease;
+    }
+    .custom-popup .mapboxgl-popup-content .mapboxgl-popup-close-button:hover {
+        color:  #161a30;
+    }
+}
+
+.segment-popup {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-content: center;
+  padding: 0 8px;
+}
+.segment-popup .header {
+  font-size: 16px;
+  font-family: Roboto, sans-serif;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.section-container{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  font-size: 15px;
+}
+.section-icons {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+.section-data {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+.section-data.speed {
+  justify-content: space-between;
 }
