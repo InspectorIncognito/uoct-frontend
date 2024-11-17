@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { onMounted, ref } from "vue";
+import { h, onMounted, ref, render } from "vue";
 import MapAPI from "@/components/api/MapAPI";
 import { ElNotification } from "element-plus";
 import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
 import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
 import { Cron } from "croner";
+import SegmentPopup from "@/components/map/SegmentPopup.vue";
+import AlertPopup from "@/components/map/AlertPopup.vue";
 
 interface AlertData {
   coords: number[];
@@ -75,25 +77,27 @@ function parseTemporalSegment(idx: number) {
 
   return `${start} - ${end}`;
 }
-
+function getAlertPopupContent(keyValue: string, useful: number, useless: number) {
+  return h(AlertPopup, {
+    keyValue: keyValue,
+    useful: useful,
+    useless: useless,
+  });
+}
 function getPopupContent(feature) {
-  return `
-    <h3>
-    Segmento ${feature.properties.sequence} de Shape(${feature.properties.shape_id})
-    </h3>
-    <h3>
-    ${parseTemporalSegment(feature.properties.temporal_segment)}
-    </h3>
+  const sequence = Number(feature.properties.sequence);
+  const shapeId = feature.properties.shape_id;
+  const speedValue = Number(feature.properties.speed);
+  const historicSpeedValue = Number(feature.properties.historic_speed);
+  const temporalRange = parseTemporalSegment(feature.properties.temporal_segment);
 
-    <h3>
-    ${
-      Number(feature.properties.speed) >= 0
-        ? `Velocidad: ${Number(feature.properties.speed)} km/h`
-        : "No se registró una velocidad"
-    }
-    </h3>
-    <h3>Histórico: ${feature.properties.historic_speed ? feature.properties.historic_speed : "No existe"}</h3>
-`;
+  return h(SegmentPopup, {
+    sequence: sequence,
+    shapeId: shapeId,
+    speed: speedValue,
+    historicSpeed: historicSpeedValue,
+    temporalRange: temporalRange,
+  });
 }
 
 function onFeatureClick(e) {
@@ -103,9 +107,14 @@ function onFeatureClick(e) {
     popup.value = new mapboxgl.Popup({
       closeButton: true,
       closeOnClick: false,
+      className: "custom-popup",
     });
   }
-  popup.value.setLngLat(e.lngLat).setHTML(getPopupContent(feature)).addTo(map.value);
+  const popupContent = document.createElement("div");
+  const componentVNode = getPopupContent(feature);
+  render(componentVNode, popupContent);
+  popup.value.setDOMContent(popupContent);
+  popup.value.setLngLat(e.lngLat).addTo(map.value);
   map.value.getSource(selectedGeoJsonSourceId).setData({
     type: "FeatureCollection",
     features: [feature],
@@ -205,22 +214,13 @@ function createPopup(alertData: AlertData, marker) {
   const popup = new mapboxgl.Popup({
     closeButton: true,
     closeOnClick: false,
-  })
-    .setLngLat(coords)
-    .setHTML(
-      "<div class='popup-title'><h1>Alerta de anomalía</h1>" +
-        `<span class='key-value'>${keyValue}</span></div>` +
-        "<div class='metrics-container'>" +
-        "<div class='metric'>" +
-        "<span class='material-icons' style='color:green'>thumb_up</span>" +
-        `<span>${useful}</span>` +
-        "</div>" +
-        "<div class='metric'>" +
-        "<span class='material-icons' style='color:red'>thumb_down</span>" +
-        `<span>${useless}</span>` +
-        "</div>" +
-        "</div>"
-    );
+    className: "custom-popup",
+  });
+  const popupContent = document.createElement("div");
+  const componentVNode = getAlertPopupContent(keyValue, useful, useless);
+  render(componentVNode, popupContent);
+  popup.setDOMContent(popupContent);
+  popup.setLngLat(coords);
   hideMarker(marker);
   popup.addTo(map.value);
   popup.on("close", () => {
