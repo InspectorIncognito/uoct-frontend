@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.0.9",
-    "axios": "^0.27.2",
+    "axios": "^0.28.0",
     "element-plus": "^2.2.15",
     "mapbox-gl": "^3.0.0",
     "pinia": "^2.0.17",
