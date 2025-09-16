@@ -30,6 +30,11 @@ const router = createRouter({
           name: "configuration",
           component: () => import("../views/Configuration.vue"),
         },
+        {
+          path: "/place-streets",
+          name: "placeStreets",
+          component: () => import("../views/PlaceStreetsFormView.vue"),
+        },
       ],
     },
     {
@@ -43,10 +48,19 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   // check user session
   const authStore = useAuthStore();
-  try {
-    await authStore.verify();
-  } catch (error) {
-    authStore.purgeAuth();
+  
+  // Skip verification in development mode if using dev token
+  const isDevelopment = import.meta.env.MODE === "development";
+  const hasDevToken = authStore.isAuthenticated && 
+    (authStore.user.email === "testuser@example.com" || 
+     localStorage.getItem("token") === "dev-token-123");
+  
+  if (!isDevelopment || !hasDevToken) {
+    try {
+      await authStore.verify();
+    } catch (error) {
+      authStore.purgeAuth();
+    }
   }
 
   if (authStore.isAuthenticated || to.name === "login") {

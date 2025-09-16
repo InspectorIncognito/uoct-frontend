@@ -24,6 +24,7 @@ const signOut = () => {
       <NavigationButton to="/speeds" icon="query_stats" name="Velocidades" />
       <NavigationButton to="/historicSpeeds" icon="query_stats" name="Vel. Mensual" />
       <NavigationButton to="/configuration" icon="settings" name="Conf." />
+      <NavigationButton to="/place-streets" icon="add_location" name="Lugar y Calles" />
       <NavigationButton external :to="FORM_URL" icon="priority_high" name="Alertas  " />
     </div>
     <div class="navigation-footer">
