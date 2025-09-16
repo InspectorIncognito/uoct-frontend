@@ -1,6 +1,6 @@
-import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import MainView from "@/views/MainView.vue";
+import { createRouter, createWebHistory } from "vue-router";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -48,13 +48,14 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   // check user session
   const authStore = useAuthStore();
-  
+
   // Skip verification in development mode if using dev token
   const isDevelopment = import.meta.env.MODE === "development";
-  const hasDevToken = authStore.isAuthenticated && 
-    (authStore.user.email === "testuser@example.com" || 
-     localStorage.getItem("token") === "dev-token-123");
-  
+  const hasDevToken =
+    authStore.isAuthenticated &&
+    (authStore.user.email === "testuser@example.com" ||
+      localStorage.getItem("token") === "dev-token-123");
+
   if (!isDevelopment || !hasDevToken) {
     try {
       await authStore.verify();

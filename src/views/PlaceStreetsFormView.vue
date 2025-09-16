@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import CustomInput from '@/components/form/CustomInput.vue';
-import CustomButton from '@/components/form/CustomButton.vue';
+import { ref } from "vue";
+import CustomInput from "@/components/form/CustomInput.vue";
+import CustomButton from "@/components/form/CustomButton.vue";
 
 interface FormData {
   place: string;
@@ -9,12 +9,12 @@ interface FormData {
 }
 
 const formData = ref<FormData>({
-  place: '',
-  streets: ['']
+  place: "",
+  streets: [""],
 });
 
 const addStreet = () => {
-  formData.value.streets.push('');
+  formData.value.streets.push("");
 };
 
 const removeStreet = (index: number) => {
@@ -33,32 +33,38 @@ const updatePlace = (value: string) => {
 
 const handleSubmit = () => {
   // Filter out empty streets
-  const validStreets = formData.value.streets.filter(street => street.trim() !== '');
-  
+  const validStreets = formData.value.streets.filter(
+    (street) => street.trim() !== ""
+  );
+
   if (!formData.value.place.trim()) {
-    alert('Please enter a place name');
+    alert("Please enter a place name");
     return;
   }
-  
+
   if (validStreets.length === 0) {
-    alert('Please enter at least one street');
+    alert("Please enter at least one street");
     return;
   }
-  
+
   const submitData = {
     place: formData.value.place.trim(),
-    streets: validStreets
+    streets: validStreets,
   };
-  
-  console.log('Form submitted:', submitData);
+
+  console.log("Form submitted:", submitData);
   // TODO: Handle form submission (API call, etc.)
-  alert(`Form submitted!\nPlace: ${submitData.place}\nStreets: ${submitData.streets.join(', ')}`);
+  alert(
+    `Form submitted!\nPlace: ${
+      submitData.place
+    }\nStreets: ${submitData.streets.join(", ")}`
+  );
 };
 
 const resetForm = () => {
   formData.value = {
-    place: '',
-    streets: ['']
+    place: "",
+    streets: [""],
   };
 };
 </script>
@@ -67,7 +73,7 @@ const resetForm = () => {
   <div class="place-streets-form">
     <div class="form-container">
       <h1 class="form-title">Add Place and Streets</h1>
-      
+
       <form @submit.prevent="handleSubmit" class="form">
         <!-- Place Input -->
         <div class="form-group">
@@ -91,10 +97,10 @@ const resetForm = () => {
               :method="addStreet"
             />
           </div>
-          
+
           <div class="streets-list">
-            <div 
-              v-for="(street, index) in formData.streets" 
+            <div
+              v-for="(street, index) in formData.streets"
               :key="index"
               class="street-item"
             >
@@ -120,15 +126,8 @@ const resetForm = () => {
 
         <!-- Form Actions -->
         <div class="form-actions">
-          <CustomButton
-            type="button"
-            text="Reset"
-            :method="resetForm"
-          />
-          <CustomButton
-            type="submit"
-            text="Submit"
-          />
+          <CustomButton type="button" text="Reset" :method="resetForm" />
+          <CustomButton type="submit" text="Submit" />
         </div>
       </form>
     </div>
@@ -235,21 +234,21 @@ const resetForm = () => {
   .place-streets-form {
     padding: 12px;
   }
-  
+
   .form-container {
     padding: 24px;
   }
-  
+
   .form-title {
     font-size: 24px;
   }
-  
+
   .streets-header {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
