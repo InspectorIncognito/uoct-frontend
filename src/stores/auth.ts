@@ -1,7 +1,7 @@
-import { defineStore } from "pinia";
 import JWTService from "@/components/api/JWTService";
-import { computed, ref } from "vue";
 import APIUser from "@/components/api/UserAPI";
+import { defineStore } from "pinia";
+import { computed, ref } from "vue";
 
 export interface User {
   first_name: string;
@@ -27,7 +27,9 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = ref(!!JWTService.getToken());
 
   const getEmail = computed(() => user.value.email);
-  const getUsername = computed(() => `${user.value.first_name} ${user.value.last_name}`);
+  const getUsername = computed(
+    () => `${user.value.first_name} ${user.value.last_name}`
+  );
 
   function setAuth(userParam: UserFromServer) {
     const token = userParam.token;
@@ -74,5 +76,13 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  return { user, isAuthenticated, getEmail, getUsername, purgeAuth, login, verify };
+  return {
+    user,
+    isAuthenticated,
+    getEmail,
+    getUsername,
+    purgeAuth,
+    login,
+    verify,
+  };
 });
