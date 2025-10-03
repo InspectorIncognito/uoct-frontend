@@ -4,7 +4,7 @@ import APIService from "@/components/api/APIService";
 // Data shape expected: { name: string, streets: string[], city: string }
 // Adjust RESOURCE constant or payload if your backend differs (e.g., 'axes' instead of 'axles').
 
-const RESOURCE = "axles/"; // change to 'axes' if your backend uses that naming
+const RESOURCE = "geo/axles/"; // change to 'axes' if your backend uses that naming
 
 export interface AxlePayload {
   name: string;
