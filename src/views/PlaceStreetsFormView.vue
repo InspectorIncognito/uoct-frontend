@@ -1,70 +1,90 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import AxlesAPI from "@/components/api/AxlesAPI";
 import CustomInput from "@/components/form/CustomInput.vue";
 import CustomButton from "@/components/form/CustomButton.vue";
 
 interface FormData {
-  place: string;
-  streets: string[];
+  nombre: string; // eje / axis name
+  calles: string[]; // streets
+  ciudad: string; // city
 }
 
 const formData = ref<FormData>({
-  place: "",
-  streets: [""],
+  nombre: "",
+  calles: [""],
+  ciudad: "Provincia de Santiago",
 });
 
 const addStreet = () => {
-  formData.value.streets.push("");
+  formData.value.calles.push("");
 };
 
 const removeStreet = (index: number) => {
-  if (formData.value.streets.length > 1) {
-    formData.value.streets.splice(index, 1);
+  if (formData.value.calles.length > 1) {
+    formData.value.calles.splice(index, 1);
   }
 };
 
 const updateStreet = (index: number, value: string) => {
-  formData.value.streets[index] = value;
+  formData.value.calles[index] = value;
 };
 
-const updatePlace = (value: string) => {
-  formData.value.place = value;
+const updateNombre = (value: string) => {
+  formData.value.nombre = value;
 };
 
-const handleSubmit = () => {
-  // Filter out empty streets
-  const validStreets = formData.value.streets.filter(
-    (street) => street.trim() !== ""
-  );
+const updateCiudad = (value: string) => {
+  formData.value.ciudad = value;
+};
 
-  if (!formData.value.place.trim()) {
-    alert("Please enter a place name");
+const cargando = ref(false);
+const errorMsg = ref("");
+const exitoMsg = ref("");
+
+// Envía los datos al backend (endpoint asumido POST /axles/)
+const handleSubmit = async () => {
+  const callesValidas = formData.value.calles.filter((c) => c.trim() !== "");
+
+  if (!formData.value.nombre.trim()) {
+    alert("Ingrese el nombre del eje");
     return;
   }
-
-  if (validStreets.length === 0) {
-    alert("Please enter at least one street");
+  if (callesValidas.length === 0) {
+    alert("Ingrese al menos una calle");
     return;
   }
 
   const submitData = {
-    place: formData.value.place.trim(),
-    streets: validStreets,
+    name: formData.value.nombre.trim(),
+    streets: callesValidas,
+    city: formData.value.ciudad.trim() || "Provincia de Santiago",
   };
 
-  console.log("Form submitted:", submitData);
-  // TODO: Handle form submission (API call, etc.)
-  alert(
-    `Form submitted!\nPlace: ${
-      submitData.place
-    }\nStreets: ${submitData.streets.join(", ")}`
-  );
+  cargando.value = true;
+  errorMsg.value = "";
+  exitoMsg.value = "";
+  try {
+    const { data } = await AxlesAPI.create(submitData);
+    exitoMsg.value = `Eje creado con ID ${data?.id || ""}`.trim();
+    console.log("Eje creado:", data);
+    // Opcional: limpiar formulario después de crear
+    resetForm();
+  } catch (err: any) {
+    console.error(err);
+    errorMsg.value = err?.response?.data
+      ? JSON.stringify(err.response.data)
+      : "Error al crear el eje";
+  } finally {
+    cargando.value = false;
+  }
 };
 
 const resetForm = () => {
   formData.value = {
-    place: "",
-    streets: [""],
+    nombre: "",
+    calles: [""],
+    ciudad: "Provincia de Santiago",
   };
 };
 </script>
@@ -72,51 +92,51 @@ const resetForm = () => {
 <template>
   <div class="place-streets-form">
     <div class="form-container">
-      <h1 class="form-title">Add Place and Streets</h1>
+      <h1 class="form-title">Nuevo Eje</h1>
 
       <form @submit.prevent="handleSubmit" class="form">
-        <!-- Place Input -->
+        <!-- Nombre del Eje -->
         <div class="form-group">
-          <label for="place" class="form-label">Place</label>
+          <label for="nombre" class="form-label">Nombre del eje</label>
           <CustomInput
             type="text"
-            name="place"
-            placeholder="Enter place name"
-            :value="formData.place"
-            @input="updatePlace"
+            name="nombre"
+            placeholder="Nombre del eje"
+            :value="formData.nombre"
+            @input="updateNombre"
           />
         </div>
 
-        <!-- Streets Section -->
+        <!-- Calles -->
         <div class="form-group">
           <div class="streets-header">
-            <label class="form-label">Streets</label>
+            <label class="form-label">Calles</label>
             <CustomButton
               type="button"
-              text="+ Add Street"
+              text="+ Agregar Calle"
               :method="addStreet"
             />
           </div>
 
           <div class="streets-list">
             <div
-              v-for="(street, index) in formData.streets"
+              v-for="(street, index) in formData.calles"
               :key="index"
               class="street-item"
             >
               <CustomInput
                 type="text"
-                :name="`street-${index}`"
-                placeholder="Enter street name"
+                :name="`calle-${index}`"
+                placeholder="Nombre de la calle"
                 :value="street"
                 @input="(value) => updateStreet(index, value)"
               />
               <button
-                v-if="formData.streets.length > 1"
+                v-if="formData.calles.length > 1"
                 type="button"
                 class="remove-street-btn"
                 @click="removeStreet(index)"
-                title="Remove street"
+                title="Quitar calle"
               >
                 ✕
               </button>
@@ -124,10 +144,33 @@ const resetForm = () => {
           </div>
         </div>
 
+        <!-- Ciudad -->
+        <div class="form-group">
+          <label for="ciudad" class="form-label">Ciudad</label>
+          <CustomInput
+            type="text"
+            name="ciudad"
+            placeholder="Ciudad"
+            :value="formData.ciudad"
+            @input="updateCiudad"
+          />
+        </div>
+
+        <div v-if="errorMsg || exitoMsg" class="status-messages">
+          <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+          <p v-if="exitoMsg" class="success-msg">{{ exitoMsg }}</p>
+        </div>
+
         <!-- Form Actions -->
         <div class="form-actions">
-          <CustomButton type="button" text="Reset" :method="resetForm" />
-          <CustomButton type="submit" text="Submit" />
+          <CustomButton type="button" text="Limpiar" :method="resetForm" />
+          <button
+            class="custom-button submit"
+            type="submit"
+            :disabled="cargando"
+          >
+            {{ cargando ? "Guardando..." : "Guardar" }}
+          </button>
         </div>
       </form>
     </div>
@@ -227,6 +270,18 @@ const resetForm = () => {
 
 .form-actions > * {
   flex: 1;
+}
+
+.status-messages {
+  margin-top: -8px;
+}
+.error-msg {
+  color: #dc3545;
+  font-size: 14px;
+}
+.success-msg {
+  color: #198754;
+  font-size: 14px;
 }
 
 /* Responsive design */
