@@ -186,15 +186,15 @@ onMounted(() => {
           label="Shape"
           column-key="Shape"
         />
-        <el-table-column sortable prop="sequence" label="Sequence" />
+        <el-table-column sortable prop="sequence" label="Secuencia" />
         <el-table-column
           sortable
           prop="temporal_segment"
-          label="Temporal Segment"
+          label="Segmento Temporal"
         />
-        <el-table-column sortable prop="day_type" label="Day Type" />
-        <el-table-column sortable prop="distance" label="Distance" />
-        <el-table-column sortable prop="time_secs" label="Time secs" />
+        <el-table-column sortable prop="day_type" label="Tipo de Día" />
+        <el-table-column sortable prop="distance" label="Distancia" />
+        <el-table-column sortable prop="time_secs" label="Tiempo (seg)" />
         <el-table-column sortable prop="timestamp_local" label="Fecha" />
       </el-table>
       <div class="table-pagination">

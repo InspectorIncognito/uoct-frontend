@@ -75,8 +75,15 @@ export function parseDateObject(date: Date) {
  * Accepts:
  *  - number (seconds since epoch or milliseconds)
  *  - string (ISO 8601 timestamp)
+ *  - Date object
  *
  * Returns a localized string like "2025-10-03 14:30:00"
+ *
+ * Examples:
+ *  formatUTCToZone(1696348800) // "2023-10-03 12:00:00" (assuming seconds)
+ *  formatUTCToZone(1696348800000) // "2023-10-03 12:00:00" (assuming ms)
+ *  formatUTCToZone("2023-10-03T15:00:00Z") // "2023-10-03 12:00:00" (UTC-3 during summer)
+ *  formatUTCToZone(new Date(), "America/New_York") // custom timezone
  */
 export function formatUTCToZone(
   value: number | string | Date,

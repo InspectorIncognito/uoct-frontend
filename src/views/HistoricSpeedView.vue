@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
 import SpeedAPI from "@/components/api/SpeedAPI";
-import { parseTemporalSegment, monthOptions, dayTypeOptions, temporalSegmentRange } from "@/utils/date_utils";
+import {
+  dayTypeOptions,
+  monthOptions,
+  parseTemporalSegment,
+  temporalSegmentRange,
+} from "@/utils/date_utils";
+import { onMounted, ref } from "vue";
 
 interface HistoricSpeed {
   shape: number;
@@ -19,10 +24,11 @@ const monthValue = ref(monthOptions[currentMonth - 1].value);
 
 const dayTypeValue = ref(dayTypeOptions[dayTypeOptions.length - 1].value);
 
-const temporalSegmentOptions: Array<{ label: string; value: number }> = Array.from(
-  { length: temporalSegmentRange },
-  (_, t) => ({ label: parseTemporalSegment(t), value: t })
-);
+const temporalSegmentOptions: Array<{ label: string; value: number }> =
+  Array.from({ length: temporalSegmentRange }, (_, t) => ({
+    label: parseTemporalSegment(t),
+    value: t,
+  }));
 temporalSegmentOptions.unshift({ label: "Todos", value: -1 });
 const selectedTemporalSegment = ref(-1);
 
@@ -37,24 +43,35 @@ const totalCount = ref<number>(0);
 const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
 
-function downloadHistoricSpeeds(month: number, dayType: string | boolean, temporalSegment: number) {
-  SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment).then((response) => {
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `historic_speed_${month_string}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  });
+function downloadHistoricSpeeds(
+  month: number,
+  dayType: string | boolean,
+  temporalSegment: number
+) {
+  SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment).then(
+    (response) => {
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `historic_speed_${month_string}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }
+  );
 }
 
 onMounted(() => {
   updateHistoricSpeedData(currentMonth, false);
 });
 
-function updateHistoricSpeedData(month: number, dayType: string | boolean, temporalSegment = -1, usePage = true) {
+function updateHistoricSpeedData(
+  month: number,
+  dayType: string | boolean,
+  temporalSegment = -1,
+  usePage = true
+) {
   loading.value = true;
   if (!usePage) {
     currentPage.value = 1;
@@ -85,13 +102,21 @@ function updateHistoricSpeedData(month: number, dayType: string | boolean, tempo
 function pageUp() {
   if (currentPage.value == totalPages.value) return;
   currentPage.value++;
-  updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
+  updateHistoricSpeedData(
+    monthValue.value,
+    dayTypeValue.value,
+    selectedTemporalSegment.value
+  );
 }
 
 function pageDown() {
   if (currentPage.value == 1) return;
   currentPage.value--;
-  updateHistoricSpeedData(monthValue.value, dayTypeValue.value, selectedTemporalSegment.value);
+  updateHistoricSpeedData(
+    monthValue.value,
+    dayTypeValue.value,
+    selectedTemporalSegment.value
+  );
 }
 </script>
 
@@ -105,19 +130,41 @@ function pageDown() {
         <div class="options-section">
           <div class="option-container">
             <span>Mes</span>
-            <el-select v-model="monthValue" placeholder="Select" style="width: 240px">
-              <el-option v-for="item in monthOptions" :key="item.value" :label="item.label" :value="item.value" />
+            <el-select
+              v-model="monthValue"
+              placeholder="Select"
+              style="width: 240px"
+            >
+              <el-option
+                v-for="item in monthOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
             </el-select>
           </div>
           <div class="option-container">
             <span>Tipo de día</span>
-            <el-select v-model="dayTypeValue" placeholder="Select" style="width: 240px">
-              <el-option v-for="item in dayTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+            <el-select
+              v-model="dayTypeValue"
+              placeholder="Select"
+              style="width: 240px"
+            >
+              <el-option
+                v-for="item in dayTypeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
             </el-select>
           </div>
           <div class="option-container">
             <span>Segmento temporal</span>
-            <el-select v-model="selectedTemporalSegment" placeholder="Select" style="width: 240px">
+            <el-select
+              v-model="selectedTemporalSegment"
+              placeholder="Select"
+              style="width: 240px"
+            >
               <el-option
                 v-for="item in temporalSegmentOptions"
                 :key="item.value"
@@ -128,7 +175,15 @@ function pageDown() {
           </div>
         </div>
 
-        <el-button @click="updateHistoricSpeedData(monthValue, dayTypeValue, selectedTemporalSegment, false)"
+        <el-button
+          @click="
+            updateHistoricSpeedData(
+              monthValue,
+              dayTypeValue,
+              selectedTemporalSegment,
+              false
+            )
+          "
           >Aplicar filtros
         </el-button>
       </div>
@@ -140,27 +195,54 @@ function pageDown() {
         :data="tableData"
         style="width: 60vw; height: 50vh"
       >
-        <el-table-column fixed sortable prop="shape" label="Shape" column-key="Shape" />
-        <el-table-column sortable prop="sequence" label="Sequence" />
-        <el-table-column sortable prop="temporal_segment" label="Temporal Segment" />
-        <el-table-column sortable prop="day_type" label="Day Type" />
-        <el-table-column sortable prop="speed" label="Speed" />
+        <el-table-column
+          fixed
+          sortable
+          prop="shape"
+          label="Shape"
+          column-key="Shape"
+        />
+        <el-table-column sortable prop="sequence" label="Secuencia" />
+        <el-table-column
+          sortable
+          prop="temporal_segment"
+          label="Segmento Temporal"
+        />
+        <el-table-column sortable prop="day_type" label="Tipo de Día" />
+        <el-table-column sortable prop="speed" label="Velocidad" />
       </el-table>
       <div class="table-pagination">
         <span>{{ totalCount }} registros</span>
         <div class="pagination" v-if="totalPages">
-          <el-button :disabled="currentPage == 1" class="pagination-button" @click="pageDown">
+          <el-button
+            :disabled="currentPage == 1"
+            class="pagination-button"
+            @click="pageDown"
+          >
             <span class="material-icons">chevron_left</span>
           </el-button>
           <span>{{ currentPage }} de {{ totalPages }}</span>
-          <el-button :disabled="currentPage == totalPages" class="pagination-button" @click="pageUp">
+          <el-button
+            :disabled="currentPage == totalPages"
+            class="pagination-button"
+            @click="pageUp"
+          >
             <span class="material-icons">chevron_right</span>
           </el-button>
         </div>
       </div>
     </div>
     <div class="download-container">
-      <div class="download-button" @click="downloadHistoricSpeeds(monthValue, dayTypeValue, selectedTemporalSegment)">
+      <div
+        class="download-button"
+        @click="
+          downloadHistoricSpeeds(
+            monthValue,
+            dayTypeValue,
+            selectedTemporalSegment
+          )
+        "
+      >
         <div class="download-label">Descargar</div>
         <span class="material-icons">download</span>
       </div>
