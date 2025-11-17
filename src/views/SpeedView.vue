@@ -39,6 +39,12 @@ const temporalSegmentOptions: Array<{ label: string; value: number }> =
 temporalSegmentOptions.unshift({ label: "Todos", value: -1 });
 const selectedTemporalSegment = ref(-1);
 
+const timeFormatOptions = [
+  { value: "local", label: "Hora Local (Santiago)" },
+  { value: "utc", label: "UTC" },
+];
+const selectedTimeFormat = ref("local");
+
 const lastDayType = ref();
 const loading = ref(false);
 
@@ -52,16 +58,55 @@ function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
   const endTime = new Date(dateTimeValue.value[1]);
   SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment).then(
     (response) => {
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      let csvData = response.data;
+
+      // Si el formato es local, convertir timestamps en el CSV
+      if (selectedTimeFormat.value === "local") {
+        csvData = convertCSVTimestamps(csvData);
+      }
+
+      const url = window.URL.createObjectURL(new Blob([csvData]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `speed_${monthString}.csv`);
+      const formatSuffix =
+        selectedTimeFormat.value === "local" ? "_local" : "_utc";
+      link.setAttribute("download", `speed_${monthString}${formatSuffix}.csv`);
       document.body.appendChild(link);
       link.click();
-      link.parentNode.removeChild(link);
+      if (link.parentNode) link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
     }
   );
+}
+
+function convertCSVTimestamps(csvText: string): string {
+  const lines = csvText.split("\n");
+  if (lines.length === 0) return csvText;
+
+  const header = lines[0];
+  const headers = header.split(",");
+  const timestampIndex = headers.findIndex((h) =>
+    h.toLowerCase().includes("timestamp")
+  );
+
+  if (timestampIndex === -1) return csvText; // No hay columna timestamp
+
+  const convertedLines = [header];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+
+    const cols = lines[i].split(",");
+    if (cols.length > timestampIndex) {
+      const timestamp = cols[timestampIndex];
+      if (timestamp && !isNaN(Number(timestamp))) {
+        cols[timestampIndex] = formatUTCToZone(Number(timestamp));
+      }
+    }
+    convertedLines.push(cols.join(","));
+  }
+
+  return convertedLines.join("\n");
 }
 
 function updateSpeedData(
@@ -164,6 +209,21 @@ onMounted(() => {
               />
             </el-select>
           </div>
+          <div class="option-container">
+            <span>Formato de descarga</span>
+            <el-select
+              v-model="selectedTimeFormat"
+              placeholder="Select"
+              style="width: 240px"
+            >
+              <el-option
+                v-for="item in timeFormatOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </div>
         </div>
 
         <el-button
@@ -219,6 +279,14 @@ onMounted(() => {
       </div>
     </div>
     <div class="download-container">
+      <div class="download-info">
+        <span
+          >Formato:
+          {{
+            selectedTimeFormat === "local" ? "Hora Local (Santiago)" : "UTC"
+          }}</span
+        >
+      </div>
       <div
         class="download-button"
         @click="downloadSpeeds(dayTypeValue, selectedTemporalSegment)"
@@ -258,7 +326,13 @@ onMounted(() => {
   justify-content: flex-end;
   align-items: center;
   flex-direction: row;
+  gap: 16px;
   padding: 8px 8px;
+}
+
+.download-info {
+  color: white;
+  font-size: 14px;
 }
 
 .download-label {
