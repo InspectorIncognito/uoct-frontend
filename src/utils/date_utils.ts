@@ -44,7 +44,10 @@ export function parseTemporalSegment(idx: number) {
     if (hours === 24) {
       return "23:59";
     }
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+      2,
+      "0"
+    )}`;
   };
 
   const start = formatTime(startHours, startMinutes);
@@ -63,4 +66,55 @@ export function parseDateObject(date: Date) {
   const seconds = date.getSeconds().toString().padStart(2, "0");
 
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+}
+
+/**
+ * Format a UTC timestamp (seconds or milliseconds) or ISO string into a
+ * human-readable string in the specified IANA time zone (default America/Santiago).
+ *
+ * Accepts:
+ *  - number (seconds since epoch or milliseconds)
+ *  - string (ISO 8601 timestamp)
+ *
+ * Returns a localized string like "2025-10-03 14:30:00"
+ */
+export function formatUTCToZone(
+  value: number | string | Date,
+  timeZone = "America/Santiago"
+) {
+  let date: Date;
+
+  if (value instanceof Date) {
+    date = value;
+  } else if (typeof value === "number") {
+    // Heuristic: if value looks like seconds (<= 1e12) treat as seconds
+    const asMs = value > 1e12 ? value : value * 1000;
+    date = new Date(asMs);
+  } else if (typeof value === "string") {
+    // ISO string (assumed UTC if ends with Z) or other parsable format
+    date = new Date(value);
+  } else {
+    return "";
+  }
+
+  // Intl.DateTimeFormat with timeZone handles DST correctly
+  const dtf = new Intl.DateTimeFormat("es-CL", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  // Format produces e.g. 03/10/2025 14:30:00 — normalize to YYYY-MM-DD HH:mm:ss
+  const parts = dtf.formatToParts(date).reduce((acc: any, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  // parts: { day, month, year, hour, minute, second }
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }

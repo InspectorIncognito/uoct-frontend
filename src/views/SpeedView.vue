@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
 import SpeedAPI from "@/components/api/SpeedAPI";
-import { parseTemporalSegment, monthOptions, dayTypeOptions, temporalSegmentRange } from "@/utils/date_utils";
+import {
+  dayTypeOptions,
+  formatUTCToZone,
+  parseTemporalSegment,
+  temporalSegmentRange,
+} from "@/utils/date_utils";
+import { onMounted, ref } from "vue";
 
 interface Speed {
   shape: number;
@@ -11,6 +16,7 @@ interface Speed {
   distance: number;
   timeSecs: number;
   timestamp: number;
+  timestamp_local?: string;
 }
 
 const today = new Date();
@@ -25,10 +31,11 @@ const monthString = currentDate.toLocaleString("default", { month: "long" });
 
 const dayTypeValue = ref(dayTypeOptions[dayTypeOptions.length - 1].value);
 
-const temporalSegmentOptions: Array<{ label: string; value: number }> = Array.from(
-  { length: temporalSegmentRange },
-  (_, t) => ({ label: parseTemporalSegment(t), value: t })
-);
+const temporalSegmentOptions: Array<{ label: string; value: number }> =
+  Array.from({ length: temporalSegmentRange }, (_, t) => ({
+    label: parseTemporalSegment(t),
+    value: t,
+  }));
 temporalSegmentOptions.unshift({ label: "Todos", value: -1 });
 const selectedTemporalSegment = ref(-1);
 
@@ -43,19 +50,25 @@ const totalPages = ref<number>(1);
 function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
   const startTime = new Date(dateTimeValue.value[0]);
   const endTime = new Date(dateTimeValue.value[1]);
-  SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment).then((response) => {
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `speed_${monthString}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  });
+  SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment).then(
+    (response) => {
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `speed_${monthString}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }
+  );
 }
 
-function updateSpeedData(dayType: string | boolean, temporalSegment = -1, usePage = true) {
+function updateSpeedData(
+  dayType: string | boolean,
+  temporalSegment = -1,
+  usePage = true
+) {
   loading.value = true;
   if (!usePage) {
     currentPage.value = 1;
@@ -72,6 +85,8 @@ function updateSpeedData(dayType: string | boolean, temporalSegment = -1, usePag
 
       response.results.forEach((obj) => {
         obj.temporal_segment = parseTemporalSegment(obj.temporal_segment);
+        // Convert timestamp (epoch seconds or ms) from UTC to America/Santiago
+        obj.timestamp_local = formatUTCToZone(obj.timestamp);
       });
       tableData.value = response.results;
     })
@@ -121,13 +136,26 @@ onMounted(() => {
           </div>
           <div class="option-container">
             <span>Tipo de día</span>
-            <el-select v-model="dayTypeValue" placeholder="Select" style="width: 240px">
-              <el-option v-for="item in dayTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+            <el-select
+              v-model="dayTypeValue"
+              placeholder="Select"
+              style="width: 240px"
+            >
+              <el-option
+                v-for="item in dayTypeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
             </el-select>
           </div>
           <div class="option-container">
             <span>Segmento temporal</span>
-            <el-select v-model="selectedTemporalSegment" placeholder="Select" style="width: 240px">
+            <el-select
+              v-model="selectedTemporalSegment"
+              placeholder="Select"
+              style="width: 240px"
+            >
               <el-option
                 v-for="item in temporalSegmentOptions"
                 :key="item.value"
@@ -138,7 +166,10 @@ onMounted(() => {
           </div>
         </div>
 
-        <el-button @click="updateSpeedData(dayTypeValue, selectedTemporalSegment, false)">Aplicar filtros</el-button>
+        <el-button
+          @click="updateSpeedData(dayTypeValue, selectedTemporalSegment, false)"
+          >Aplicar filtros</el-button
+        >
       </div>
       <el-table
         v-loading="loading"
@@ -148,29 +179,50 @@ onMounted(() => {
         :data="tableData"
         style="width: 60vw; height: 50vh"
       >
-        <el-table-column fixed sortable prop="shape" label="Shape" column-key="Shape" />
+        <el-table-column
+          fixed
+          sortable
+          prop="shape"
+          label="Shape"
+          column-key="Shape"
+        />
         <el-table-column sortable prop="sequence" label="Sequence" />
-        <el-table-column sortable prop="temporal_segment" label="Temporal Segment" />
+        <el-table-column
+          sortable
+          prop="temporal_segment"
+          label="Temporal Segment"
+        />
         <el-table-column sortable prop="day_type" label="Day Type" />
         <el-table-column sortable prop="distance" label="Distance" />
         <el-table-column sortable prop="time_secs" label="Time secs" />
-        <el-table-column sortable prop="timestamp" label="timestamp" />
+        <el-table-column sortable prop="timestamp_local" label="Fecha" />
       </el-table>
       <div class="table-pagination">
         <span>{{ totalCount }} registros</span>
         <div class="pagination" v-if="totalPages">
-          <el-button :disabled="currentPage == 1" class="pagination-button" @click="pageDown">
+          <el-button
+            :disabled="currentPage == 1"
+            class="pagination-button"
+            @click="pageDown"
+          >
             <span class="material-icons">chevron_left</span>
           </el-button>
           <span>{{ currentPage }} de {{ totalPages }}</span>
-          <el-button :disabled="currentPage == totalPages" class="pagination-button" @click="pageUp">
+          <el-button
+            :disabled="currentPage == totalPages"
+            class="pagination-button"
+            @click="pageUp"
+          >
             <span class="material-icons">chevron_right</span>
           </el-button>
         </div>
       </div>
     </div>
     <div class="download-container">
-      <div class="download-button" @click="downloadSpeeds(dayTypeValue, selectedTemporalSegment)">
+      <div
+        class="download-button"
+        @click="downloadSpeeds(dayTypeValue, selectedTemporalSegment)"
+      >
         <div class="download-label">Descargar</div>
         <span class="material-icons">download</span>
       </div>
