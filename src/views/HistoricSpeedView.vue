@@ -5,6 +5,7 @@ import {
   formatUTCToZone,
   monthOptions,
   parseTemporalSegment,
+  temporalSegmentFromUTCIndex,
   temporalSegmentRange,
 } from "@/utils/date_utils";
 import { onMounted, ref } from "vue";
@@ -128,15 +129,26 @@ function updateHistoricSpeedData(
   const page = currentPage.value;
   SpeedAPI.getHistoricSpeeds(month, dayType, temporalSegment, page)
     .then((response) => {
-      response = response.data;
-      const newTotalCount: number = response.count;
+      const data = response.data;
+      const newTotalCount: number = data.count;
       totalCount.value = newTotalCount;
       totalPages.value = Math.floor(newTotalCount / 10);
 
-      response.results.forEach((obj) => {
-        obj.temporal_segment = parseTemporalSegment(obj.temporal_segment);
+      data.results.forEach((obj: any) => {
+        // For historic data the response.temporal_segment is likely computed in UTC.
+        // Map it to local segment using the queried month as reference for DST.
+        try {
+          const refDate = new Date(new Date().getFullYear(), month - 1, 1);
+          const localIdx = temporalSegmentFromUTCIndex(
+            obj.temporal_segment,
+            refDate
+          );
+          obj.temporal_segment = parseTemporalSegment(localIdx);
+        } catch (e) {
+          obj.temporal_segment = parseTemporalSegment(obj.temporal_segment);
+        }
       });
-      tableData.value = response.results;
+      tableData.value = data.results;
     })
     .catch((e) => {
       console.error(e);

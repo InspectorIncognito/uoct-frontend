@@ -4,6 +4,7 @@ import {
   dayTypeOptions,
   formatUTCToZone,
   parseTemporalSegment,
+  temporalSegmentFromTimestamp,
   temporalSegmentRange,
 } from "@/utils/date_utils";
 import { onMounted, ref } from "vue";
@@ -122,14 +123,21 @@ function updateSpeedData(
   const endTime = new Date(dateTimeValue.value[1]);
   const page = currentPage.value;
   SpeedAPI.getSpeeds(startTime, endTime, dayType, temporalSegment, page)
-    .then((response) => {
-      response = response.data;
+    .then((resp) => {
+      const response = resp.data as { count: number; results: any[] };
       const newTotalCount: number = response.count;
       totalCount.value = newTotalCount;
       totalPages.value = Math.floor(newTotalCount / 10);
 
-      response.results.forEach((obj) => {
-        obj.temporal_segment = parseTemporalSegment(obj.temporal_segment);
+      response.results.forEach((obj: any) => {
+        // If the backend gave a UTC temporal index, recompute it from the UTC timestamp
+        // so the displayed segment corresponds to local (America/Santiago) time.
+        if (obj.timestamp) {
+          const localIdx = temporalSegmentFromTimestamp(obj.timestamp);
+          obj.temporal_segment = parseTemporalSegment(localIdx);
+        } else {
+          obj.temporal_segment = parseTemporalSegment(obj.temporal_segment);
+        }
         // Convert timestamp (epoch seconds or ms) from UTC to America/Santiago
         obj.timestamp_local = formatUTCToZone(obj.timestamp);
       });
