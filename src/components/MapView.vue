@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import MapAPI from "@/components/api/MapAPI";
+import AlertPopup from "@/components/map/AlertPopup.vue";
+import SegmentPopup from "@/components/map/SegmentPopup.vue";
+import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
+import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
+import { Cron } from "croner";
+import { ElNotification } from "element-plus";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { h, onMounted, ref, render } from "vue";
-import MapAPI from "@/components/api/MapAPI";
-import { ElNotification } from "element-plus";
-import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
-import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
-import { Cron } from "croner";
-import SegmentPopup from "@/components/map/SegmentPopup.vue";
-import AlertPopup from "@/components/map/AlertPopup.vue";
 
 interface AlertData {
   coords: number[];
@@ -34,9 +34,9 @@ const TEMPORAL_RANGE = 15;
 const style = ref("mapbox://styles/mapbox/dark-v10");
 
 const mapContainer = ref<HTMLElement>();
-const map = ref(null);
-const popup = ref(null);
-const currentGeoJson = ref(null);
+const map = ref<InstanceType<typeof mapboxgl.Map> | null>(null);
+const popup = ref<InstanceType<typeof mapboxgl.Popup> | null>(null);
+const currentGeoJson = ref<unknown>(null);
 
 const geoJsonSourceId = "geojson-source";
 const geoJsonLayerId = "geojson-layer";
@@ -45,7 +45,7 @@ const selectedGeoJsonLayerId = "selected-geojson-layer";
 
 const currentDate = ref(new Date());
 
-const markerList = ref([]);
+const markerList = ref<InstanceType<typeof mapboxgl.Marker>[]>([]);
 
 function initializeMap() {
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -69,7 +69,10 @@ function parseTemporalSegment(idx: number) {
   const endMinutes = endTime % 60;
 
   const formatTime = (hours: number, minutes: number) => {
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+      2,
+      "0"
+    )}`;
   };
 
   const start = formatTime(startHours, startMinutes);
@@ -77,19 +80,25 @@ function parseTemporalSegment(idx: number) {
 
   return `${start} - ${end}`;
 }
-function getAlertPopupContent(keyValue: string, useful: number, useless: number) {
+function getAlertPopupContent(
+  keyValue: string,
+  useful: number,
+  useless: number
+) {
   return h(AlertPopup, {
     keyValue: keyValue,
     useful: useful,
     useless: useless,
   });
 }
-function getPopupContent(feature) {
-  const sequence = Number(feature.properties.sequence);
-  const shapeId = feature.properties.shape_id;
+function getPopupContent(feature: any) {
+  const sequence = Number(feature.properties?.sequence);
+  const shapeId = feature.properties?.shape_id;
   const speedValue = Number(feature.properties.speed);
   const historicSpeedValue = Number(feature.properties.historic_speed);
-  const temporalRange = parseTemporalSegment(feature.properties.temporal_segment);
+  const temporalRange = parseTemporalSegment(
+    feature.properties.temporal_segment
+  );
 
   return h(SegmentPopup, {
     sequence: sequence,
@@ -100,8 +109,9 @@ function getPopupContent(feature) {
   });
 }
 
-function onFeatureClick(e) {
-  const feature = e.features[0];
+function onFeatureClick(e: any) {
+  const feature = e.features?.[0];
+  if (!feature || !map.value) return;
 
   if (!popup.value) {
     popup.value = new mapboxgl.Popup({
@@ -115,17 +125,20 @@ function onFeatureClick(e) {
   render(componentVNode, popupContent);
   popup.value.setDOMContent(popupContent);
   popup.value.setLngLat(e.lngLat).addTo(map.value);
-  map.value.getSource(selectedGeoJsonSourceId).setData({
+  const source = map.value.getSource(selectedGeoJsonSourceId) as any;
+  source?.setData({
     type: "FeatureCollection",
     features: [feature],
   });
 }
 
 function onMouseEnterFeature() {
+  if (!map.value) return;
   map.value.getCanvas().style.cursor = "pointer";
 }
 
 function onMouseLeaveFeature() {
+  if (!map.value) return;
   map.value.getCanvas().style.cursor = "";
 }
 
@@ -134,7 +147,9 @@ async function updateGeoJson() {
   const geojsonData = response.data.geojson;
   const alertData = response.data.alerts;
 
-  if (map.value && map.value.getSource(geoJsonSourceId)) {
+  if (!map.value) return;
+
+  if (map.value.getSource(geoJsonSourceId)) {
     map.value.removeLayer(geoJsonLayerId);
     map.value.removeSource(geoJsonSourceId);
   }
@@ -149,7 +164,34 @@ async function updateGeoJson() {
     type: "line",
     source: geoJsonSourceId,
     paint: {
-      "line-color": ["get", "color"],
+      // Use a continuous color interpolation based on the numeric `speed` property.
+      // If `speed` is missing, fall back to a gray color (Sin datos).
+      "line-color": [
+        "case",
+        ["has", "speed"],
+        [
+          "interpolate",
+          ["linear"],
+          ["get", "speed"],
+          0,
+          "#FF0000",
+          5,
+          "#FF4000",
+          10,
+          "#FF8000",
+          15,
+          "#FFD700",
+          19,
+          "#FFFF00",
+          21,
+          "#02FE02",
+          25,
+          "#008000",
+          30,
+          "#0000FF",
+        ],
+        "#DDDDDD",
+      ],
       "line-width": 4,
     },
     layout: {
@@ -172,7 +214,7 @@ async function updateGeoJson() {
   map.value.on("mouseenter", geoJsonLayerId, onMouseEnterFeature);
   map.value.on("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
 
-  alertData.forEach((data) => {
+  alertData.forEach((data: AlertData) => {
     createMarker(data);
   });
 }
@@ -197,15 +239,19 @@ function getTime(date: Date) {
   return `${hours}:${minutes}:${seconds}`;
 }
 
-function hideMarker(marker) {
+function hideMarker(marker: InstanceType<typeof mapboxgl.Marker>) {
   marker.remove();
 }
 
-function showMarker(marker) {
+function showMarker(marker: InstanceType<typeof mapboxgl.Marker>) {
+  if (!map.value) return;
   marker.addTo(map.value);
 }
 
-function createPopup(alertData: AlertData, marker) {
+function createPopup(
+  alertData: AlertData,
+  marker: InstanceType<typeof mapboxgl.Marker>
+) {
   const keyValue = alertData.key_value;
   const coords = alertData.coords;
   const useful = alertData.useful;
@@ -222,7 +268,7 @@ function createPopup(alertData: AlertData, marker) {
   popup.setDOMContent(popupContent);
   popup.setLngLat(coords);
   hideMarker(marker);
-  popup.addTo(map.value);
+  if (map.value) popup.addTo(map.value);
   popup.on("close", () => {
     showMarker(marker);
   });
@@ -238,8 +284,9 @@ function createMarker(alertData: AlertData) {
 }
 
 function showMarkers() {
+  if (!map.value) return;
   markerList.value.forEach((marker) => {
-    marker.addTo(map.value);
+    marker.addTo(map.value!);
   });
 }
 
@@ -260,7 +307,11 @@ onMounted(() => {
 </script>
 <template>
   <div ref="mapContainer" class="map-container">
-    <UpdateStatusComponent :top="5" :date="currentDate" :content="[`Mapa actualizado a las ${getTime(currentDate)}`]" />
+    <UpdateStatusComponent
+      :top="5"
+      :date="currentDate"
+      :content="[`Mapa actualizado a las ${getTime(currentDate)}`]"
+    />
     <SpeedInfoComponent :colorData="COLOR_DATA" :top="30" />
   </div>
 </template>
