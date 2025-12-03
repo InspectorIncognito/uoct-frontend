@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import AxlesAPI from "@/components/api/AxlesAPI";
-import CustomInput from "@/components/form/CustomInput.vue";
 import CustomButton from "@/components/form/CustomButton.vue";
+import CustomInput from "@/components/form/CustomInput.vue";
+import { ref } from "vue";
 
 interface FormData {
   nombre: string; // eje / axis name
@@ -94,6 +94,33 @@ const resetForm = () => {
     <div class="form-container">
       <h1 class="form-title">Nuevo Eje</h1>
 
+      <!-- Instrucciones -->
+      <div class="instructions">
+        <h2 class="instructions-title">Instrucciones</h2>
+        <ul class="instructions-list">
+          <li>
+            <strong>Nombre del eje:</strong> Nombre que se guardará en la base
+            de datos para identificar este eje vial.
+          </li>
+          <li>
+            <strong>Calles:</strong> Nombres de las calles que conforman el eje.
+            Deben coincidir exactamente con los nombres en
+            <a
+              href="https://www.openstreetmap.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="osm-link"
+              >OpenStreetMap</a
+            >. Las calles pueden tener separaciones de hasta 510 metros que
+            serán conectadas automáticamente.
+          </li>
+          <li>
+            <strong>Ciudad:</strong> Nombre de la relación que contiene el eje
+            vial (por defecto: "Provincia de Santiago").
+          </li>
+        </ul>
+      </div>
+
       <form @submit.prevent="handleSubmit" class="form">
         <!-- Nombre del Eje -->
         <div class="form-group">
@@ -150,7 +177,7 @@ const resetForm = () => {
           <CustomInput
             type="text"
             name="ciudad"
-            placeholder="Ciudad"
+            placeholder="Provincia de Santiago"
             :value="formData.ciudad"
             @input="updateCiudad"
           />
@@ -201,8 +228,66 @@ const resetForm = () => {
   color: #31304d;
   font-size: 28px;
   font-weight: 600;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   text-align: center;
+}
+
+.instructions {
+  background: #f8f9fa;
+  border-left: 4px solid #0066cc;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 32px;
+}
+
+.instructions-title {
+  color: #31304d;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.instructions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.instructions-list li {
+  color: #495057;
+  font-size: 14px;
+  line-height: 1.6;
+  padding-left: 20px;
+  position: relative;
+}
+
+.instructions-list li::before {
+  content: "•";
+  color: #0066cc;
+  font-weight: bold;
+  font-size: 18px;
+  position: absolute;
+  left: 0;
+}
+
+.instructions-list strong {
+  color: #31304d;
+  font-weight: 600;
+}
+
+.osm-link {
+  color: #0066cc;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.osm-link:hover {
+  color: #0052a3;
+  text-decoration: underline;
 }
 
 .form {
@@ -296,6 +381,21 @@ const resetForm = () => {
 
   .form-title {
     font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .instructions {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .instructions-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .instructions-list li {
+    font-size: 13px;
   }
 
   .streets-header {
