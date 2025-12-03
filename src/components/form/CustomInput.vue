@@ -22,6 +22,10 @@ defineProps({
     type: String || null,
     default: "default error msg.",
   },
+  hideLabel: {
+    type: Boolean,
+    default: false,
+  },
 });
 defineEmits(["input"]);
 
@@ -36,7 +40,7 @@ function capitalize(str: string) {
 
 <template>
   <div class="custom-input-block">
-    <label :for="name">{{ capitalize(name) }}</label>
+    <label v-if="!hideLabel" :for="name">{{ capitalize(name) }}</label>
     <div class="custom-input-container">
       <span v-if="icon != null" class="material-icons filled">{{ icon }}</span>
       <input
@@ -54,9 +58,12 @@ function capitalize(str: string) {
         :placeholder="placeholder"
         @input="$emit('input', $event.target.value)"
       />
-      <span v-if="type === 'password'" class="visibility material-icons" @click="toggleShowPassword">{{
-        showPassword ? "visibility" : "visibility_off"
-      }}</span>
+      <span
+        v-if="type === 'password'"
+        class="visibility material-icons"
+        @click="toggleShowPassword"
+        >{{ showPassword ? "visibility" : "visibility_off" }}</span
+      >
     </div>
     <div v-if="error != null" class="error-msg">{{ error }}</div>
   </div>

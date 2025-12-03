@@ -131,19 +131,13 @@ const resetForm = () => {
             placeholder="Nombre del eje"
             :value="formData.nombre"
             @input="updateNombre"
+            :hideLabel="true"
           />
         </div>
 
         <!-- Calles -->
         <div class="form-group">
-          <div class="streets-header">
-            <label class="form-label">Calles</label>
-            <CustomButton
-              type="button"
-              text="+ Agregar Calle"
-              :method="addStreet"
-            />
-          </div>
+          <label class="form-label">Calles</label>
 
           <div class="streets-list">
             <div
@@ -168,6 +162,12 @@ const resetForm = () => {
                 ✕
               </button>
             </div>
+            <CustomButton
+              type="button"
+              text="+ Agregar Calle"
+              :method="addStreet"
+              class="add-street-button"
+            />
           </div>
         </div>
 
@@ -180,6 +180,7 @@ const resetForm = () => {
             placeholder="Provincia de Santiago"
             :value="formData.ciudad"
             @input="updateCiudad"
+            :hideLabel="true"
           />
         </div>
 
@@ -234,7 +235,7 @@ const resetForm = () => {
 
 .instructions {
   background: #f8f9fa;
-  border-left: 4px solid #0066cc;
+  border-left: 4px solid #31304d;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 32px;
@@ -266,7 +267,7 @@ const resetForm = () => {
 
 .instructions-list li::before {
   content: "•";
-  color: #0066cc;
+  color: #31304d;
   font-weight: bold;
   font-size: 18px;
   position: absolute;
@@ -279,14 +280,14 @@ const resetForm = () => {
 }
 
 .osm-link {
-  color: #0066cc;
+  color: #31304d;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
 
 .osm-link:hover {
-  color: #0052a3;
+  color: #31304d;
   text-decoration: underline;
 }
 
@@ -314,7 +315,12 @@ const resetForm = () => {
   align-items: center;
   margin-bottom: 12px;
 }
-
+.add-street-button {
+  align-self: flex-start;
+  width: auto;
+  padding: 6px 12px;
+  font-size: 14px;
+}
 .streets-list {
   display: flex;
   flex-direction: column;
