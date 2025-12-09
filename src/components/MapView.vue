@@ -364,7 +364,10 @@ function clearCameraMarkers() {
 async function loadCameras() {
   try {
     const response = await MapAPI.getCameras();
-    const cameras: CameraData[] = response.data;
+    // Handle both array response and object with cameras property
+    const cameras: CameraData[] = Array.isArray(response.data)
+      ? response.data
+      : response.data.cameras || response.data.results || [];
     clearCameraMarkers();
     cameras.forEach((camera) => {
       createCameraMarker(camera);
