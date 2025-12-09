@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MapAPI from "@/components/api/MapAPI";
 import AlertPopup from "@/components/map/AlertPopup.vue";
+import CameraPopup from "@/components/map/CameraPopup.vue";
 import SegmentPopup from "@/components/map/SegmentPopup.vue";
 import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
 import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
@@ -15,6 +16,12 @@ interface AlertData {
   key_value: string;
   useful: number;
   useless: number;
+}
+
+interface CameraData {
+  camera_id: string;
+  latitude: number;
+  longitude: number;
 }
 
 const COLOR_DATA = [
@@ -46,6 +53,26 @@ const selectedGeoJsonLayerId = "selected-geojson-layer";
 const currentDate = ref(new Date());
 
 const markerList = ref<InstanceType<typeof mapboxgl.Marker>[]>([]);
+const cameraMarkerList = ref<InstanceType<typeof mapboxgl.Marker>[]>([]);
+
+// Camera SVG icon
+const cameraSvgIcon = `<svg width="32" height="21" viewBox="0 0 79 51" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_d_1_72)">
+<path d="M50.0417 21.25V36.8333C50.0417 37.1124 49.9867 37.3887 49.8799 37.6465C49.7731 37.9044 49.6166 38.1386 49.4193 38.3359C49.2219 38.5333 48.9877 38.6898 48.7299 38.7966C48.472 38.9034 48.1957 38.9583 47.9167 38.9583H9.66666C9.3876 38.9583 9.11127 38.9034 8.85345 38.7966C8.59564 38.6898 8.36138 38.5333 8.16405 38.3359C7.96673 38.1386 7.8102 37.9044 7.70341 37.6465C7.59662 37.3887 7.54166 37.1124 7.54166 36.8333V5.66667C7.54166 5.10308 7.76554 4.56258 8.16405 4.16406C8.56257 3.76555 9.10307 3.54167 9.66666 3.54167H47.9167C48.4802 3.54167 49.0207 3.76555 49.4193 4.16406C49.8178 4.56258 50.0417 5.10308 50.0417 5.66667V21.25ZM50.0417 21.25L67.8067 6.44583C68.117 6.18738 68.4945 6.02269 68.895 5.97106C69.2955 5.91944 69.7025 5.98301 70.0682 6.15434C70.4339 6.32567 70.7432 6.59765 70.9599 6.93844C71.1765 7.27923 71.2916 7.6747 71.2917 8.07854V34.4215C71.291 34.825 71.1754 35.22 70.9584 35.5603C70.7415 35.9005 70.4321 36.172 70.0666 36.3429C69.701 36.5138 69.2943 36.577 68.8941 36.5253C68.4939 36.4735 68.1167 36.3089 67.8067 36.0506L50.0417 21.25Z" stroke="#FF0004" stroke-width="7.08333" stroke-linecap="round" stroke-linejoin="round" shape-rendering="crispEdges"/>
+</g>
+<defs>
+<filter id="filter0_d_1_72" x="0" y="0" width="78.8333" height="50.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="2"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_72"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_72" result="shape"/>
+</filter>
+</defs>
+</svg>`;
 
 function initializeMap() {
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -91,6 +118,13 @@ function getAlertPopupContent(
     useless: useless,
   });
 }
+
+function getCameraPopupContent(cameraId: string) {
+  return h(CameraPopup, {
+    cameraId: cameraId,
+  });
+}
+
 function getPopupContent(feature: any) {
   const sequence = Number(feature.properties?.sequence);
   const shapeId = feature.properties?.shape_id;
@@ -272,9 +306,79 @@ function clearMarkers() {
   markerList.value = [];
 }
 
+// Camera marker functions
+function createCameraMarkerElement(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.innerHTML = cameraSvgIcon;
+  el.style.cursor = "pointer";
+  el.style.display = "flex";
+  el.style.alignItems = "center";
+  el.style.justifyContent = "center";
+  return el;
+}
+
+function createCameraMarker(cameraData: CameraData) {
+  const coords: [number, number] = [cameraData.longitude, cameraData.latitude];
+  const el = createCameraMarkerElement();
+
+  const marker = new mapboxgl.Marker({ element: el }).setLngLat(coords);
+
+  // Create popup for hover
+  const cameraPopup = new mapboxgl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    className: "camera-popup",
+    offset: 25,
+  });
+
+  el.addEventListener("mouseenter", () => {
+    if (!map.value) return;
+    const popupContent = document.createElement("div");
+    const componentVNode = getCameraPopupContent(cameraData.camera_id);
+    render(componentVNode, popupContent);
+    cameraPopup.setDOMContent(popupContent);
+    cameraPopup.setLngLat(coords).addTo(map.value);
+  });
+
+  el.addEventListener("mouseleave", () => {
+    cameraPopup.remove();
+  });
+
+  cameraMarkerList.value.push(marker);
+}
+
+function showCameraMarkers() {
+  if (!map.value) return;
+  cameraMarkerList.value.forEach((marker) => {
+    marker.addTo(map.value!);
+  });
+}
+
+function clearCameraMarkers() {
+  cameraMarkerList.value.forEach((marker) => {
+    marker.getElement().remove();
+  });
+  cameraMarkerList.value = [];
+}
+
+async function loadCameras() {
+  try {
+    const response = await MapAPI.getCameras();
+    const cameras: CameraData[] = response.data;
+    clearCameraMarkers();
+    cameras.forEach((camera) => {
+      createCameraMarker(camera);
+    });
+    showCameraMarkers();
+  } catch (error) {
+    console.error("Error loading cameras:", error);
+  }
+}
+
 onMounted(() => {
   initializeMap();
   updateMap();
+  loadCameras();
   Cron("59 0/15 * * * *", () => {
     updateMap();
   });

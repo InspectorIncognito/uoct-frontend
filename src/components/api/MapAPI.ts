@@ -4,6 +4,9 @@ class MapAPI {
   public static async getMapData() {
     return APIService.get("geo/mapData");
   }
+  public static async getCameras() {
+    return APIService.get("geo/cameras");
+  }
   public static get_all_gps() {
     return APIService.get("gps/create");
   }
