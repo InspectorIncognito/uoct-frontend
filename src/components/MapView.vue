@@ -19,10 +19,10 @@ interface AlertData {
 
 const COLOR_DATA = [
   { color: "#FF0000", info: "< 5 km/h" },
-  { color: "#FF4000", info: "5 - 10 km/h" },
+  { color: "#FF5100FF", info: "5 - 10 km/h" },
   { color: "#FF8000", info: "10 - 15 km/h" },
   { color: "#FFD700", info: "15 - 19 km/h" },
-  { color: "#FFFF00", info: "19 - 21 km/h" },
+  { color: "#D0FF00", info: "19 - 21 km/h" },
   { color: "#02FE02", info: "21 - 25 km/h" },
   { color: "#008000", info: "25 - 30 km/h" },
   { color: "#0000FF", info: "> 30 km/h" },
@@ -164,34 +164,9 @@ async function updateGeoJson() {
     type: "line",
     source: geoJsonSourceId,
     paint: {
-      // Use a continuous color interpolation based on the numeric `speed` property.
-      // If `speed` is missing, fall back to a gray color (Sin datos).
-      "line-color": [
-        "case",
-        ["has", "speed"],
-        [
-          "interpolate",
-          ["linear"],
-          ["get", "speed"],
-          0,
-          "#FF0000",
-          5,
-          "#FF4000",
-          10,
-          "#FF8000",
-          15,
-          "#FFD700",
-          19,
-          "#FFFF00",
-          21,
-          "#02FE02",
-          25,
-          "#008000",
-          30,
-          "#0000FF",
-        ],
-        "#DDDDDD",
-      ],
+      // Use the color property from the backend data.
+      // If `color` is missing, fall back to a gray color (Sin datos).
+      "line-color": ["coalesce", ["get", "color"], "#DDDDDD"],
       "line-width": 4,
     },
     layout: {
