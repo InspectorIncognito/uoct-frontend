@@ -25,14 +25,14 @@ interface CameraData {
 }
 
 const COLOR_DATA = [
-  { color: "#FF0000", info: "< 5 km/h" },
-  { color: "#FF5100FF", info: "5 - 10 km/h" },
-  { color: "#FF8000", info: "10 - 15 km/h" },
-  { color: "#FFD700", info: "15 - 19 km/h" },
-  { color: "#D0FF00", info: "19 - 21 km/h" },
-  { color: "#02FE02", info: "21 - 25 km/h" },
-  { color: "#008000", info: "25 - 30 km/h" },
-  { color: "#0000FF", info: "> 30 km/h" },
+  { color: "#D32F2F", info: "< 5 km/h" },
+  { color: "#F57C00", info: "5 - 10 km/h" },
+  { color: "#FFB300", info: "10 - 15 km/h" },
+  { color: "#FDD835", info: "15 - 19 km/h" },
+  { color: "#CDDC39", info: "19 - 21 km/h" },
+  { color: "#8BC34A", info: "21 - 25 km/h" },
+  { color: "#43A047", info: "25 - 30 km/h" },
+  { color: "#1B5E20", info: "> 30 km/h" },
   { color: "#DDDDDD", info: "Sin datos" },
 ];
 
