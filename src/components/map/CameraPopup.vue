@@ -8,11 +8,11 @@ defineProps({
   <div class="camera-popup">
     <div class="header">
       <span class="material-icons">videocam</span>
-      Cámara
+      Cámara CCTV
     </div>
     <div class="section-container">
       <div class="section">
-        <div class="section-label">ID:</div>
+        <div class="section-label">ID de la UOCT:</div>
         <div class="section-data">{{ cameraId }}</div>
       </div>
     </div>
@@ -41,7 +41,7 @@ defineProps({
 
 .header .material-icons {
   font-size: 18px;
-  color: #ff4000;
+  color: #3b5b97;
 }
 
 .section-container {
