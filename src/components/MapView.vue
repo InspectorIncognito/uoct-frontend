@@ -77,19 +77,41 @@ function getCameraIconSize(zoom: number): { width: number; height: number } {
   };
 }
 
-function initializeMap() {
-  mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
-  map.value = new mapboxgl.Map({
-    container: mapContainer.value,
-    style: "mapbox://styles/mapbox/dark-v10",
-    center: [-70.65387, -33.443018],
-    zoom: 14,
-  });
-  map.value.dragRotate.disable();
+function initializeMap(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!mapContainer.value) {
+      reject(new Error("Map container not found"));
+      return;
+    }
 
-  // Update camera marker sizes when zoom changes
-  map.value.on("zoom", () => {
-    updateCameraMarkerSizes();
+    // Verify container has valid dimensions
+    const rect = mapContainer.value.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      console.warn("Map container has zero dimensions, waiting for resize...");
+    }
+
+    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+    map.value = new mapboxgl.Map({
+      container: mapContainer.value,
+      style: "mapbox://styles/mapbox/dark-v10",
+      center: [-70.65387, -33.443018],
+      zoom: 14,
+    });
+    map.value.dragRotate.disable();
+
+    // Wait for map to fully load before resolving
+    map.value.on("load", () => {
+      // Update camera marker sizes when zoom changes
+      map.value?.on("zoom", () => {
+        updateCameraMarkerSizes();
+      });
+      resolve();
+    });
+
+    map.value.on("error", (e) => {
+      console.error("Mapbox error:", e);
+      reject(e);
+    });
   });
 }
 
@@ -404,13 +426,17 @@ async function loadCameras() {
   }
 }
 
-onMounted(() => {
-  initializeMap();
-  updateMap();
-  loadCameras();
-  Cron("59 0/15 * * * *", () => {
+onMounted(async () => {
+  try {
+    await initializeMap();
     updateMap();
-  });
+    loadCameras();
+    Cron("59 0/15 * * * *", () => {
+      updateMap();
+    });
+  } catch (error) {
+    console.error("Failed to initialize map:", error);
+  }
 });
 </script>
 <template>
