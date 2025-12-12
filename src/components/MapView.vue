@@ -55,6 +55,9 @@ const currentDate = ref(new Date());
 const markerList = ref<InstanceType<typeof mapboxgl.Marker>[]>([]);
 const cameraMarkerList = ref<InstanceType<typeof mapboxgl.Marker>[]>([]);
 
+// Flag to track if map is fully initialized and ready for interactions
+const mapReady = ref(false);
+
 // Camera SVG icon (returns SVG with dynamic size)
 function getCameraSvgIcon(width: number, height: number): string {
   return `<svg width="${width}" height="${height}" viewBox="0 0 79 51" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -77,19 +80,36 @@ function getCameraIconSize(zoom: number): { width: number; height: number } {
   };
 }
 
-function initializeMap() {
-  mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
-  map.value = new mapboxgl.Map({
-    container: mapContainer.value,
-    style: "mapbox://styles/mapbox/dark-v10",
-    center: [-70.65387, -33.443018],
-    zoom: 14,
-  });
-  map.value.dragRotate.disable();
+function initializeMap(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!mapContainer.value) {
+      reject(new Error("Map container not found"));
+      return;
+    }
 
-  // Update camera marker sizes when zoom changes
-  map.value.on("zoom", () => {
-    updateCameraMarkerSizes();
+    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+    map.value = new mapboxgl.Map({
+      container: mapContainer.value,
+      style: "mapbox://styles/mapbox/dark-v10",
+      center: [-70.65387, -33.443018],
+      zoom: 14,
+    });
+    map.value.dragRotate.disable();
+
+    // Wait for map to fully load before marking as ready
+    map.value.on("load", () => {
+      mapReady.value = true;
+      // Update camera marker sizes when zoom changes
+      map.value?.on("zoom", () => {
+        updateCameraMarkerSizes();
+      });
+      resolve();
+    });
+
+    map.value.on("error", (e) => {
+      console.error("Mapbox error:", e);
+      reject(e);
+    });
   });
 }
 
@@ -152,8 +172,13 @@ function getPopupContent(feature: any) {
 }
 
 function onFeatureClick(e: any) {
+  // Guard against uninitialized map or invalid event data
+  if (!mapReady.value || !map.value) return;
+  const p = e?.point;
+  if (!p || typeof p.x !== "number" || typeof p.y !== "number") return;
+  
   const feature = e.features?.[0];
-  if (!feature || !map.value) return;
+  if (!feature) return;
 
   if (!popup.value) {
     popup.value = new mapboxgl.Popup({
@@ -174,13 +199,21 @@ function onFeatureClick(e: any) {
   });
 }
 
-function onMouseEnterFeature() {
-  if (!map.value) return;
+function onMouseEnterFeature(e: any) {
+  // Guard against uninitialized map or invalid event data
+  if (!mapReady.value || !map.value) return;
+  const p = e?.point;
+  if (!p || typeof p.x !== "number" || typeof p.y !== "number") return;
+  
   map.value.getCanvas().style.cursor = "pointer";
 }
 
-function onMouseLeaveFeature() {
-  if (!map.value) return;
+function onMouseLeaveFeature(e: any) {
+  // Guard against uninitialized map or invalid event data
+  if (!mapReady.value || !map.value) return;
+  const p = e?.point;
+  if (!p || typeof p.x !== "number" || typeof p.y !== "number") return;
+  
   map.value.getCanvas().style.cursor = "";
 }
 
@@ -358,7 +391,8 @@ function createCameraMarker(cameraData: CameraData) {
   });
 
   el.addEventListener("mouseenter", () => {
-    if (!map.value) return;
+    // Guard against uninitialized map
+    if (!mapReady.value || !map.value) return;
     const popupContent = document.createElement("div");
     const componentVNode = getCameraPopupContent(cameraData.camera_id);
     render(componentVNode, popupContent);
@@ -404,13 +438,18 @@ async function loadCameras() {
   }
 }
 
-onMounted(() => {
-  initializeMap();
-  updateMap();
-  loadCameras();
-  Cron("59 0/15 * * * *", () => {
+onMounted(async () => {
+  try {
+    // Wait for map to be fully loaded before adding data and interactions
+    await initializeMap();
     updateMap();
-  });
+    loadCameras();
+    Cron("59 0/15 * * * *", () => {
+      updateMap();
+    });
+  } catch (error) {
+    console.error("Failed to initialize map:", error);
+  }
 });
 </script>
 <template>
