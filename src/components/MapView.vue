@@ -414,7 +414,8 @@ onMounted(() => {
 });
 </script>
 <template>
-  <div ref="mapContainer" class="map-container">
+  <div class="map-wrapper">
+    <div ref="mapContainer" class="map-container"></div>
     <UpdateStatusComponent
       :top="5"
       :date="currentDate"
@@ -425,9 +426,18 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.map-container {
+.map-wrapper {
+  position: relative;
   flex: 1;
   height: 100vh;
+}
+
+.map-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 body {
