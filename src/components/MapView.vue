@@ -5,6 +5,10 @@ import CameraPopup from "@/components/map/CameraPopup.vue";
 import SegmentPopup from "@/components/map/SegmentPopup.vue";
 import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
 import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
+import {
+  parseTemporalSegment,
+  temporalSegmentFromUTCIndex,
+} from "@/utils/date_utils";
 import { Cron } from "croner";
 import { ElNotification } from "element-plus";
 import mapboxgl from "mapbox-gl";
@@ -35,8 +39,6 @@ const COLOR_DATA = [
   { color: "#1B5E20", info: "> 30 km/h" },
   { color: "#DDDDDD", info: "Sin datos" },
 ];
-
-const TEMPORAL_RANGE = 15;
 
 const style = ref("mapbox://styles/mapbox/dark-v10");
 
@@ -93,27 +95,15 @@ function initializeMap() {
   });
 }
 
-function parseTemporalSegment(idx: number) {
-  if (!idx) return "";
-  const startTime = idx * TEMPORAL_RANGE;
-  const endTime = startTime + TEMPORAL_RANGE;
+function formatTemporalSegmentToSantiago(utcIdx: number) {
+  if (!utcIdx && utcIdx !== 0) return "";
 
-  const startHours = Math.floor(startTime / 60);
-  const endHours = Math.floor(endTime / 60);
-  const startMinutes = startTime % 60;
-  const endMinutes = endTime % 60;
+  // Convert UTC temporal segment index to Santiago timezone
+  const referenceDate = new Date();
+  const localIdx = temporalSegmentFromUTCIndex(utcIdx, referenceDate);
 
-  const formatTime = (hours: number, minutes: number) => {
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-      2,
-      "0"
-    )}`;
-  };
-
-  const start = formatTime(startHours, startMinutes);
-  const end = formatTime(endHours, endMinutes);
-
-  return `${start} - ${end}`;
+  // Format the local temporal segment
+  return parseTemporalSegment(localIdx);
 }
 function getAlertPopupContent(
   keyValue: string,
@@ -138,7 +128,7 @@ function getPopupContent(feature: any) {
   const shapeId = feature.properties?.shape_id;
   const speedValue = Number(feature.properties.speed);
   const historicSpeedValue = Number(feature.properties.historic_speed);
-  const temporalRange = parseTemporalSegment(
+  const temporalRange = formatTemporalSegmentToSantiago(
     feature.properties.temporal_segment
   );
 
