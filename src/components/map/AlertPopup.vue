@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { parseTemporalSegment } from "@/utils/date_utils";
 import { computed } from "vue";
 
 const props = defineProps({
@@ -18,11 +17,9 @@ const displayKeyValue = computed(() => {
   const [shape, sequence, dayType, utcTemporalSegment, speed] = parts;
 
   // Convert UTC temporal segment index to Santiago timezone
-  // The temporal segment is computed in UTC, but we need to display it in Santiago time
   const utcIndex = parseInt(utcTemporalSegment, 10);
   if (isNaN(utcIndex)) return props.keyValue;
 
-  // Calculate the offset between UTC and Santiago (typically -3 or -4 hours depending on DST)
   const referenceDate = new Date();
   const TEMPORAL_RANGE = 15; // 15 minutes per segment
   const total = Math.floor(1440 / TEMPORAL_RANGE); // 96 segments per day
@@ -63,21 +60,15 @@ const displayKeyValue = computed(() => {
   if (localIndex < 0) localIndex += total;
 
   // Determine if the day changes when converting from UTC to Santiago
-  // Example: UTC Monday 01:00 (segment 4) -> Santiago Sunday 22:00 (segment 88)
   let adjustedDayType = dayType;
   const utcMinutes = utcIndex * TEMPORAL_RANGE;
-  const localMinutes = localIndex * TEMPORAL_RANGE;
 
   // Calculate if we crossed midnight (day boundary)
-  // If offsetMinutes is negative (Santiago is behind UTC), and UTC time is early morning,
-  // the local time would be the previous day
   if (offsetMinutes < 0 && utcMinutes < Math.abs(offsetMinutes)) {
     // We crossed back to the previous day
-    // L (Monday) -> D (Sunday), D (Sunday) -> S (Saturday), S (Saturday) -> L (Friday)
-    const dayOrder = ["L", "S", "D"]; // L=Mon-Fri, S=Sat, D=Sun
+    const dayOrder = ["L", "S", "D"];
     const currentIdx = dayOrder.indexOf(dayType);
     if (currentIdx !== -1) {
-      // Go back one day type
       const prevIdx = (currentIdx - 1 + dayOrder.length) % dayOrder.length;
       adjustedDayType = dayOrder[prevIdx];
     }
@@ -91,19 +82,8 @@ const displayKeyValue = computed(() => {
     }
   }
 
-  // Format the temporal segment for display
-  const formattedTime = parseTemporalSegment(localIndex);
-
-  // Map day type to human readable text
-  const dayTypeLabels: Record<string, string> = {
-    L: "Laboral",
-    S: "Sábado",
-    D: "Domingo",
-  };
-  const dayTypeLabel = dayTypeLabels[adjustedDayType] || adjustedDayType;
-
-  // Reconstruct the key value with formatted time and adjusted day type
-  return `${shape}|${sequence}|${dayTypeLabel}|${formattedTime}|${speed} km/h`;
+  // Reconstruct the key value with adjusted day type and local temporal segment
+  return `${shape}|${sequence}|${adjustedDayType}|${localIndex}|${speed}`;
 });
 </script>
 
