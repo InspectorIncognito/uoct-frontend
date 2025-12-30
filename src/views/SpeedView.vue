@@ -54,6 +54,10 @@ const totalCount = ref<number>(0);
 const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
 
+// Server-side sorting state
+const sortProp = ref<string | null>(null);
+const sortOrder = ref<"ascending" | "descending" | null>(null);
+
 function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
   const startTime = new Date(dateTimeValue.value[0]);
   const endTime = new Date(dateTimeValue.value[1]);
@@ -122,12 +126,39 @@ function updateSpeedData(
   const startTime = new Date(dateTimeValue.value[0]);
   const endTime = new Date(dateTimeValue.value[1]);
   const page = currentPage.value;
-  SpeedAPI.getSpeeds(startTime, endTime, dayType, temporalSegment, page)
+
+  // Build ordering parameter for server-side sorting
+  let ordering: string | undefined;
+  if (sortProp.value) {
+    // Map frontend prop names to backend field names
+    const propMap: Record<string, string> = {
+      shape: "segment__shape",
+      sequence: "segment__sequence",
+      temporal_segment: "temporal_segment",
+      day_type: "day_type",
+      distance: "distance",
+      time_secs: "time_secs",
+      timestamp: "timestamp",
+      timestamp_local: "timestamp",
+    };
+    const backendField = propMap[sortProp.value] || sortProp.value;
+    ordering =
+      sortOrder.value === "descending" ? `-${backendField}` : backendField;
+  }
+
+  SpeedAPI.getSpeeds(
+    startTime,
+    endTime,
+    dayType,
+    temporalSegment,
+    page,
+    ordering
+  )
     .then((resp) => {
       const response = resp.data as { count: number; results: any[] };
       const newTotalCount: number = response.count;
       totalCount.value = newTotalCount;
-      totalPages.value = Math.floor(newTotalCount / 10);
+      totalPages.value = Math.max(1, Math.ceil(newTotalCount / 10));
 
       response.results.forEach((obj: any) => {
         // If the backend gave a UTC temporal index, recompute it from the UTC timestamp
@@ -161,6 +192,19 @@ function pageUp() {
 function pageDown() {
   if (currentPage.value == 1) return;
   currentPage.value--;
+  updateSpeedData(dayTypeValue.value, selectedTemporalSegment.value);
+}
+
+function handleSortChange({
+  prop,
+  order,
+}: {
+  prop: string | null;
+  order: "ascending" | "descending" | null;
+}) {
+  sortProp.value = prop;
+  sortOrder.value = order;
+  currentPage.value = 1; // Reset to first page when sorting changes
   updateSpeedData(dayTypeValue.value, selectedTemporalSegment.value);
 }
 
@@ -246,24 +290,37 @@ onMounted(() => {
         row-key="date"
         :data="tableData"
         style="width: 60vw; height: 50vh"
+        @sort-change="handleSortChange"
       >
         <el-table-column
           fixed
-          sortable
+          sortable="custom"
           prop="shape"
           label="Shape"
           column-key="Shape"
         />
-        <el-table-column sortable prop="sequence" label="Secuencia" />
+        <el-table-column sortable="custom" prop="sequence" label="Secuencia" />
         <el-table-column
-          sortable
+          sortable="custom"
           prop="temporal_segment"
           label="Segmento Temporal"
         />
-        <el-table-column sortable prop="day_type" label="Tipo de Día" />
-        <el-table-column sortable prop="distance" label="Distancia" />
-        <el-table-column sortable prop="time_secs" label="Tiempo (seg)" />
-        <el-table-column sortable prop="timestamp_local" label="Fecha" />
+        <el-table-column
+          sortable="custom"
+          prop="day_type"
+          label="Tipo de Día"
+        />
+        <el-table-column sortable="custom" prop="distance" label="Distancia" />
+        <el-table-column
+          sortable="custom"
+          prop="time_secs"
+          label="Tiempo (seg)"
+        />
+        <el-table-column
+          sortable="custom"
+          prop="timestamp_local"
+          label="Fecha"
+        />
       </el-table>
       <div class="table-pagination">
         <span>{{ totalCount }} registros</span>

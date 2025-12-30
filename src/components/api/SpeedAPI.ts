@@ -30,11 +30,13 @@ class SpeedAPI {
     dayType: string | boolean,
     temporalSegment: number,
     page: number,
-    endpoint: string
+    endpoint: string,
+    ordering?: string
   ) {
     let slug = `?startTime=${startTime}&endTime=${endTime}&page=${page}`;
     if (dayType !== false) slug += `&dayType=${dayType}`;
     if (temporalSegment !== -1) slug += `&temporalSegment=${temporalSegment}`;
+    if (ordering) slug += `&ordering=${ordering}`;
     return APIService.get(endpoint, slug);
   }
 
@@ -43,15 +45,35 @@ class SpeedAPI {
     endTime: Date,
     dayType: string | boolean,
     temporalSegment: number,
-    page: number
+    page: number,
+    ordering?: string
   ) {
     const parsedStartTime = parseDateObject(startTime);
     const parsedEndTime = parseDateObject(endTime);
-    return this.getListByDates(parsedStartTime, parsedEndTime, dayType, temporalSegment, page, "geo/speeds");
+    return this.getListByDates(
+      parsedStartTime,
+      parsedEndTime,
+      dayType,
+      temporalSegment,
+      page,
+      "geo/speeds",
+      ordering
+    );
   }
 
-  public static getHistoricSpeeds(month: number, dayType: string | boolean, temporalSegment: number, page: number) {
-    return this.getListByMonth(month, dayType, temporalSegment, page, "geo/historicSpeeds");
+  public static getHistoricSpeeds(
+    month: number,
+    dayType: string | boolean,
+    temporalSegment: number,
+    page: number
+  ) {
+    return this.getListByMonth(
+      month,
+      dayType,
+      temporalSegment,
+      page,
+      "geo/historicSpeeds"
+    );
   }
 
   public static downloadCSV(args: DownloadArgs) {
@@ -71,12 +93,17 @@ class SpeedAPI {
       query_params.push(`endTime=${endTime}`);
     }
     if (dayType !== false) query_params.push(`dayType=${dayType}`);
-    if (temporalSegment !== -1) query_params.push(`&temporalSegment=${temporalSegment}`);
+    if (temporalSegment !== -1)
+      query_params.push(`&temporalSegment=${temporalSegment}`);
     slug += query_params.join("&");
     return APIService.get(endpoint, slug);
   }
 
-  public static downloadHistoricSpeeds(month: number, dayType: string | boolean, temporalSegment: number) {
+  public static downloadHistoricSpeeds(
+    month: number,
+    dayType: string | boolean,
+    temporalSegment: number
+  ) {
     const args: DownloadArgs = {
       month: month,
       dayType: dayType,
@@ -86,7 +113,12 @@ class SpeedAPI {
     return this.downloadCSV(args);
   }
 
-  public static downloadSpeeds(startTime: Date, endTime: Date, dayType: string | boolean, temporalSegment: number) {
+  public static downloadSpeeds(
+    startTime: Date,
+    endTime: Date,
+    dayType: string | boolean,
+    temporalSegment: number
+  ) {
     const parsedStartTime = parseDateObject(startTime);
     const parsedEndTime = parseDateObject(endTime);
     const args: DownloadArgs = {
