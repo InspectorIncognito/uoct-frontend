@@ -25,6 +25,98 @@ export function getDayType(day: number) {
   return day === 7 ? "D" : day === 6 ? "S" : "L";
 }
 
+/**
+ * Get day type (L, S, D) from a Date object in a specific timezone.
+ * Handles edge cases where UTC 00:00-03:00 on Mon/Sat/Sun maps to previous day in Santiago.
+ *
+ * @param date - Date object or timestamp
+ * @param timeZone - IANA timezone (default: America/Santiago)
+ * @returns 'L' for weekday (Mon-Fri), 'S' for Saturday, 'D' for Sunday
+ */
+export function getDayTypeFromDate(
+  value: number | string | Date,
+  timeZone = "America/Santiago",
+): string {
+  let date: Date;
+
+  if (value instanceof Date) {
+    date = value;
+  } else if (typeof value === "number") {
+    const asMs = value > 1e12 ? value : value * 1000;
+    date = new Date(asMs);
+  } else if (typeof value === "string") {
+    date = new Date(value);
+  } else {
+    return "L";
+  }
+
+  // Get day of week in the target timezone
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+  });
+
+  const weekday = dtf.format(date);
+
+  // Map weekday to day type
+  // Sun = 0, Mon = 1, ..., Sat = 6 (JS convention)
+  // But Intl gives us the name, so we map it
+  switch (weekday) {
+    case "Sun":
+      return "D";
+    case "Sat":
+      return "S";
+    default:
+      return "L";
+  }
+}
+
+/**
+ * Calculate temporal segment index from a timestamp in the local timezone.
+ * This recalculates the segment based on the local hour and minute.
+ *
+ * @param value - timestamp (number, string, or Date)
+ * @param timeZone - IANA timezone (default: America/Santiago)
+ * @param range - minutes per segment (default: 15)
+ * @returns segment index 0-95
+ */
+export function getTemporalSegmentFromTimestamp(
+  value: number | string | Date,
+  timeZone = "America/Santiago",
+  range = TEMPORAL_RANGE,
+): number {
+  let date: Date;
+
+  if (value instanceof Date) {
+    date = value;
+  } else if (typeof value === "number") {
+    const asMs = value > 1e12 ? value : value * 1000;
+    date = new Date(asMs);
+  } else if (typeof value === "string") {
+    date = new Date(value);
+  } else {
+    return 0;
+  }
+
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = dtf.formatToParts(date).reduce((acc: any, p) => {
+    acc[p.type] = p.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const hour = Number(parts.hour || "0");
+  const minute = Number(parts.minute || "0");
+  const minutesSinceMidnight = hour * 60 + minute;
+
+  return Math.floor(minutesSinceMidnight / range);
+}
+
 export function getDayTypeIndex(dayType: string) {
   const dayTypes = ["L", "S", "D"];
   return dayTypes.indexOf(dayType);
@@ -46,7 +138,7 @@ export function parseTemporalSegment(idx: number) {
     }
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
       2,
-      "0"
+      "0",
     )}`;
   };
 
@@ -87,7 +179,7 @@ export function parseDateObject(date: Date) {
  */
 export function formatUTCToZone(
   value: number | string | Date,
-  timeZone = "America/Santiago"
+  timeZone = "America/Santiago",
 ) {
   let date: Date;
 
@@ -135,7 +227,7 @@ export function formatUTCToZone(
 export function temporalSegmentFromTimestamp(
   value: number | string | Date,
   timeZone = "America/Santiago",
-  range = TEMPORAL_RANGE
+  range = TEMPORAL_RANGE,
 ) {
   // Reuse the same heuristics for epoch detection
   let date: Date;
@@ -180,7 +272,7 @@ export function temporalSegmentFromUTCIndex(
   utcIndex: number,
   referenceDate: Date,
   timeZone = "America/Santiago",
-  range = TEMPORAL_RANGE
+  range = TEMPORAL_RANGE,
 ) {
   const total = Math.floor(1440 / range);
 
@@ -191,7 +283,7 @@ export function temporalSegmentFromUTCIndex(
     referenceDate.getDate(),
     0,
     0,
-    0
+    0,
   );
   const dtf = new Intl.DateTimeFormat("en-US", {
     timeZone,
