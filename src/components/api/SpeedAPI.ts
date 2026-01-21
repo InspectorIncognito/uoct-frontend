@@ -113,6 +113,20 @@ class SpeedAPI {
     return this.downloadCSV(args);
   }
 
+  public static downloadHistoricSpeedsLocal(
+    month: number,
+    dayType: string | boolean,
+    temporalSegment: number
+  ) {
+    const args: DownloadArgs = {
+      month: month,
+      dayType: dayType,
+      temporalSegment: temporalSegment,
+      endpoint: "geo/historicSpeeds/to_csv_local",
+    };
+    return this.downloadCSV(args);
+  }
+
   public static downloadSpeeds(
     startTime: Date,
     endTime: Date,
@@ -127,6 +141,24 @@ class SpeedAPI {
       dayType: dayType,
       temporalSegment: temporalSegment,
       endpoint: "geo/speeds/to_csv",
+    };
+    return this.downloadCSV(args);
+  }
+
+  public static downloadSpeedsLocal(
+    startTime: Date,
+    endTime: Date,
+    dayType: string | boolean,
+    temporalSegment: number
+  ) {
+    const parsedStartTime = parseDateObject(startTime);
+    const parsedEndTime = parseDateObject(endTime);
+    const args: DownloadArgs = {
+      startTime: parsedStartTime,
+      endTime: parsedEndTime,
+      dayType: dayType,
+      temporalSegment: temporalSegment,
+      endpoint: "geo/speeds/to_csv_local",
     };
     return this.downloadCSV(args);
   }

@@ -2,9 +2,6 @@
 import SpeedAPI from "@/components/api/SpeedAPI";
 import {
   dayTypeOptions,
-  formatUTCToZone,
-  getDayTypeFromDate,
-  getTemporalSegmentFromTimestamp,
   monthOptions,
   parseTemporalSegment,
   temporalSegmentFromUTCIndex,
@@ -58,101 +55,28 @@ function downloadHistoricSpeeds(
   dayType: string | boolean,
   temporalSegment: number,
 ) {
-  SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment).then(
-    (response) => {
-      let csvData = response.data;
+  // Usar el endpoint del backend según el formato seleccionado
+  const downloadPromise =
+    selectedTimeFormat.value === "local"
+      ? SpeedAPI.downloadHistoricSpeedsLocal(month, dayType, temporalSegment)
+      : SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment);
 
-      // Si el formato es local, convertir timestamps en el CSV
-      if (selectedTimeFormat.value === "local") {
-        csvData = convertCSVTimestamps(csvData);
-      }
-
-      const url = window.URL.createObjectURL(new Blob([csvData]));
-      const link = document.createElement("a");
-      link.href = url;
-      const formatSuffix =
-        selectedTimeFormat.value === "local" ? "_local" : "_utc";
-      link.setAttribute(
-        "download",
-        `historic_speed_${month_string}${formatSuffix}.csv`,
-      );
-      document.body.appendChild(link);
-      link.click();
-      if (link.parentNode) link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    },
-  );
-}
-
-function convertCSVTimestamps(csvText: string): string {
-  const lines = csvText.split("\n");
-  if (lines.length === 0) return csvText;
-
-  const header = lines[0];
-  const headers = header.split(",");
-  const timestampIndex = headers.findIndex((h) =>
-    h.toLowerCase().includes("timestamp"),
-  );
-  const temporalSegmentIndex = headers.findIndex((h) =>
-    h.toLowerCase().includes("temporal_segment"),
-  );
-  const dayTypeIndex = headers.findIndex((h) =>
-    h.toLowerCase().includes("day_type"),
-  );
-
-  if (timestampIndex === -1) return csvText; // No hay columna timestamp
-
-  const convertedLines = [header];
-
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-
-    const cols = lines[i].split(",");
-    if (cols.length > timestampIndex) {
-      const timestamp = cols[timestampIndex].trim();
-
-      // Detectar si es un timestamp válido (epoch number o ISO string)
-      let timestampValue: number | string | null = null;
-
-      if (timestamp && !isNaN(Number(timestamp))) {
-        // Es un número (epoch en segundos o milisegundos)
-        timestampValue = Number(timestamp);
-      } else if (
-        timestamp &&
-        (timestamp.includes("T") || timestamp.includes("-"))
-      ) {
-        // Es un ISO string o formato de fecha
-        const parsedDate = new Date(timestamp);
-        if (!isNaN(parsedDate.getTime())) {
-          timestampValue = timestamp;
-        }
-      }
-
-      if (timestampValue !== null) {
-        // Convertir timestamp a hora local de Santiago
-        cols[timestampIndex] = formatUTCToZone(timestampValue);
-
-        // Recalcular temporal_segment basado en la hora local
-        // Casos borde: UTC 00:00-03:00 en Lun/Sab/Dom mapea al día anterior en Santiago
-        if (temporalSegmentIndex !== -1) {
-          const localSegment = getTemporalSegmentFromTimestamp(timestampValue);
-          cols[temporalSegmentIndex] = String(localSegment);
-        }
-
-        // Recalcular day_type basado en el día local
-        // Lunes UTC 00:00-03:00 → Domingo local
-        // Sábado UTC 00:00-03:00 → Viernes local (Laboral)
-        // Domingo UTC 00:00-03:00 → Sábado local
-        if (dayTypeIndex !== -1) {
-          const localDayType = getDayTypeFromDate(timestampValue);
-          cols[dayTypeIndex] = localDayType;
-        }
-      }
-    }
-    convertedLines.push(cols.join(","));
-  }
-
-  return convertedLines.join("\n");
+  downloadPromise.then((response) => {
+    const csvData = response.data;
+    const url = window.URL.createObjectURL(new Blob([csvData]));
+    const link = document.createElement("a");
+    link.href = url;
+    const formatSuffix =
+      selectedTimeFormat.value === "local" ? "_local" : "_utc";
+    link.setAttribute(
+      "download",
+      `historic_speed_${month_string}${formatSuffix}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    if (link.parentNode) link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  });
 }
 
 onMounted(() => {
