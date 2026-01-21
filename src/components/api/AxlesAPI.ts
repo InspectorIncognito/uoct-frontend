@@ -12,11 +12,27 @@ export interface AxlePayload {
   city: string;
 }
 
+export interface ProcessAxisPayload {
+  axis_name: string;
+  distance_threshold?: number;
+}
+
 class AxlesAPI {
   public static create(payload: AxlePayload) {
     APIService.setHeader();
     const params = { data: payload };
     return APIService.post(RESOURCE, params);
+  }
+
+  /**
+   * Triggers the Django management command 'add_single_axis' to process
+   * the axis geometry from OpenStreetMap data.
+   * @param payload - axis_name (required), distance_threshold (optional, default 500.0)
+   */
+  public static processAxis(payload: ProcessAxisPayload) {
+    APIService.setHeader();
+    const params = { data: payload };
+    return APIService.post(`${RESOURCE}process/`, params);
   }
 }
 

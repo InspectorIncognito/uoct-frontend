@@ -39,6 +39,7 @@ const updateCiudad = (value: string) => {
 };
 
 const cargando = ref(false);
+const procesando = ref(false);
 const errorMsg = ref("");
 const exitoMsg = ref("");
 
@@ -66,10 +67,33 @@ const handleSubmit = async () => {
   exitoMsg.value = "";
   try {
     const { data } = await AxlesAPI.create(submitData);
-    exitoMsg.value = `Eje creado con ID ${data?.id || ""}`.trim();
+    const axisName = submitData.name;
+    exitoMsg.value = `Eje creado con ID ${
+      data?.id || ""
+    }. Procesando geometría...`.trim();
     console.log("Eje creado:", data);
-    // Opcional: limpiar formulario después de crear
-    resetForm();
+
+    // Procesar el eje: ejecuta el comando de Django add_single_axis
+    procesando.value = true;
+    try {
+      await AxlesAPI.processAxis({
+        axis_name: axisName,
+        distance_threshold: 500.0,
+      });
+      exitoMsg.value = `Eje "${axisName}" creado y procesado correctamente.`;
+      console.log("Eje procesado exitosamente:", axisName);
+      // Limpiar formulario después de crear y procesar
+      resetForm();
+    } catch (processErr: any) {
+      console.error("Error al procesar el eje:", processErr);
+      errorMsg.value = processErr?.response?.data
+        ? `Eje creado pero error al procesar: ${JSON.stringify(
+            processErr.response.data,
+          )}`
+        : `Eje creado pero error al procesar la geometría`;
+    } finally {
+      procesando.value = false;
+    }
   } catch (err: any) {
     console.error(err);
     errorMsg.value = err?.response?.data
@@ -195,9 +219,15 @@ const resetForm = () => {
           <button
             class="custom-button submit"
             type="submit"
-            :disabled="cargando"
+            :disabled="cargando || procesando"
           >
-            {{ cargando ? "Guardando..." : "Guardar" }}
+            {{
+              procesando
+                ? "Procesando geometría..."
+                : cargando
+                ? "Guardando..."
+                : "Guardar"
+            }}
           </button>
         </div>
       </form>
