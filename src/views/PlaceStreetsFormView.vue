@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AxlesAPI, { type Axle } from "@/components/api/AxlesAPI";
-import CustomButton from "@/components/form/CustomButton.vue";
 import CustomInput from "@/components/form/CustomInput.vue";
 import { computed, onMounted, ref } from "vue";
 
@@ -289,12 +288,10 @@ onMounted(() => {
                   ✕
                 </button>
               </div>
-              <CustomButton
-                type="button"
-                text="+ Agregar Calle"
-                :method="addStreet"
-                class="add-street-button"
-              />
+              <button type="button" class="add-street-btn" @click="addStreet">
+                <span class="add-icon">+</span>
+                Agregar Calle
+              </button>
             </div>
           </div>
 
@@ -318,9 +315,8 @@ onMounted(() => {
 
           <!-- Form Actions -->
           <div class="form-actions">
-            <CustomButton type="button" text="Limpiar" :method="resetForm" />
             <button
-              class="custom-button submit"
+              class="submit-button"
               type="submit"
               :disabled="cargando || procesando"
             >
@@ -338,12 +334,27 @@ onMounted(() => {
 
       <!-- DELETE CARD -->
       <div class="card delete-card">
-        <h1 class="form-title delete-title">Eliminar Eje</h1>
-        <p class="section-description">
-          Seleccione un eje de la lista para eliminarlo. Esta acción eliminará
-          también todos los datos asociados (shapes, segmentos, velocidades,
-          alertas, etc.).
-        </p>
+        <h1 class="form-title">Eliminar Eje</h1>
+
+        <!-- Instrucciones -->
+        <div class="instructions">
+          <h2 class="instructions-title">Instrucciones</h2>
+          <ul class="instructions-list">
+            <li>
+              <strong>Seleccionar eje:</strong> Escoja el eje que desea eliminar
+              de la lista desplegable.
+            </li>
+            <li>
+              <strong>Datos asociados:</strong> Al eliminar un eje se borrarán
+              también todos los shapes, segmentos, velocidades, alertas y demás
+              datos relacionados.
+            </li>
+            <li>
+              <strong>Acción irreversible:</strong> Esta operación no se puede
+              deshacer. Asegúrese de seleccionar el eje correcto.
+            </li>
+          </ul>
+        </div>
 
         <div class="form-group">
           <label for="axle-select" class="form-label">Eje a eliminar</label>
@@ -558,12 +569,35 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 12px;
 }
-.add-street-button {
-  align-self: flex-start;
-  width: auto;
-  padding: 6px 12px;
+
+.add-street-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: #31304d;
+  border: 2px dashed #31304d;
+  border-radius: 8px;
+  padding: 12px 16px;
   font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
 }
+
+.add-street-btn:hover {
+  background: #31304d;
+  color: white;
+  border-style: solid;
+}
+
+.add-street-btn .add-icon {
+  font-size: 18px;
+  font-weight: 600;
+}
+
 .streets-list {
   display: flex;
   flex-direction: column;
@@ -606,6 +640,28 @@ onMounted(() => {
   flex: 1;
 }
 
+.submit-button {
+  background: #31304d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.submit-button:hover:not(:disabled) {
+  background: #4a4970;
+}
+
+.submit-button:disabled {
+  background: #a9a8b8;
+  cursor: not-allowed;
+}
+
 .status-messages {
   margin-top: -8px;
 }
@@ -619,17 +675,6 @@ onMounted(() => {
 }
 
 /* Delete Section Styles */
-.delete-title {
-  color: #dc3545;
-}
-
-.section-description {
-  color: #6c757d;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 20px;
-}
-
 .select-wrapper {
   display: flex;
   gap: 8px;
