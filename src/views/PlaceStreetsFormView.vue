@@ -2,7 +2,7 @@
 import AxlesAPI, { type Axle } from "@/components/api/AxlesAPI";
 import CustomButton from "@/components/form/CustomButton.vue";
 import CustomInput from "@/components/form/CustomInput.vue";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 interface FormData {
   nombre: string; // eje / axis name
@@ -134,9 +134,10 @@ const fetchAxles = async () => {
   }
 };
 
-const selectedAxle = () => {
-  return axlesList.value.find((a) => a.id === selectedAxleId.value);
-};
+const selectedAxle = computed(() => {
+  if (selectedAxleId.value === null) return null;
+  return axlesList.value.find((a) => a.id === selectedAxleId.value) || null;
+});
 
 const handleDelete = async () => {
   if (!selectedAxleId.value) {
@@ -144,7 +145,7 @@ const handleDelete = async () => {
     return;
   }
 
-  const axle = selectedAxle();
+  const axle = selectedAxle.value;
   const confirmMsg = axle?.has_shapes
     ? `¿Está seguro de eliminar el eje "${axle.name}"?\n\nEsto eliminará también ${axle.shapes_count} shape(s) y todos los datos asociados (segmentos, velocidades, alertas, etc.).`
     : `¿Está seguro de eliminar el eje "${axle?.name}"?`;
@@ -345,26 +346,26 @@ onMounted(() => {
         </div>
 
         <!-- Selected Axle Info -->
-        <div v-if="selectedAxle()" class="axle-info">
+        <div v-if="selectedAxle" class="axle-info">
           <h4>Información del eje seleccionado:</h4>
           <ul>
-            <li><strong>Nombre:</strong> {{ selectedAxle()?.name }}</li>
-            <li><strong>Ciudad:</strong> {{ selectedAxle()?.city }}</li>
+            <li><strong>Nombre:</strong> {{ selectedAxle.name }}</li>
+            <li><strong>Ciudad:</strong> {{ selectedAxle.city }}</li>
             <li>
-              <strong>Calles:</strong> {{ selectedAxle()?.streets.join(", ") }}
+              <strong>Calles:</strong> {{ selectedAxle.streets.join(", ") }}
             </li>
             <li>
               <strong>Estado:</strong>
               <span
                 :class="
-                  selectedAxle()?.has_shapes
+                  selectedAxle.has_shapes
                     ? 'status-processed'
                     : 'status-pending'
                 "
               >
                 {{
-                  selectedAxle()?.has_shapes
-                    ? `Procesado (${selectedAxle()?.shapes_count} shapes)`
+                  selectedAxle.has_shapes
+                    ? `Procesado (${selectedAxle.shapes_count} shapes)`
                     : "Sin procesar"
                 }}
               </span>
