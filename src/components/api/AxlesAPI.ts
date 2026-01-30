@@ -71,6 +71,20 @@ class AxlesAPI {
   }
 
   /**
+   * Get a specific page of axles using the full URL.
+   * Used for pagination when fetching all axles.
+   * @param url - Full URL for the next/previous page
+   */
+  public static getPage(url: string) {
+    APIService.setHeader();
+    // Extract the path from the full URL to use with axios
+    // The URL comes as "http://localhost/api/geo/axles/?page=2"
+    const urlObj = new URL(url);
+    const path = urlObj.pathname.replace("/api/", "") + urlObj.search;
+    return APIService.query(path, {});
+  }
+
+  /**
    * Delete an axle by ID. This will also delete all associated shapes,
    * segments, speeds, alerts, etc.
    * @param id - The ID of the axle to delete

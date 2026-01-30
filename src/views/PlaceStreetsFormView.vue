@@ -124,13 +124,40 @@ const fetchAxles = async () => {
   loadingAxles.value = true;
   deleteErrorMsg.value = "";
   try {
-    const { data } = await AxlesAPI.getAll();
-    console.log("Respuesta API getAll:", data);
+    // API returns paginated response: { count, next, previous, results }
+    // We need to fetch all pages
+    let allAxles: Axle[] = [];
+    let nextUrl: string | null = null;
+
+    // First request
+    const { data: firstPage } = await AxlesAPI.getAll();
+    console.log("Respuesta API getAll (página 1):", firstPage);
+
+    if (firstPage?.results) {
+      allAxles = [...firstPage.results];
+      nextUrl = firstPage.next;
+
+      // Fetch remaining pages if any
+      while (nextUrl) {
+        console.log("Cargando página siguiente:", nextUrl);
+        const { data: nextPage } = await AxlesAPI.getPage(nextUrl);
+        if (nextPage?.results) {
+          allAxles = [...allAxles, ...nextPage.results];
+          nextUrl = nextPage.next;
+        } else {
+          break;
+        }
+      }
+    } else if (Array.isArray(firstPage)) {
+      // If API returns array directly (no pagination)
+      allAxles = firstPage;
+    }
+
     // Filter out any invalid entries that don't have an id
-    const validAxles = (Array.isArray(data) ? data : []).filter(
+    const validAxles = allAxles.filter(
       (a: Axle) => a && a.id !== null && a.id !== undefined,
     );
-    console.log("Ejes válidos:", validAxles);
+    console.log("Total ejes cargados:", validAxles.length);
     axlesList.value = validAxles;
   } catch (err: any) {
     console.error("Error al cargar ejes:", err);
@@ -189,129 +216,129 @@ onMounted(() => {
 
 <template>
   <div class="place-streets-form">
-    <div class="form-container">
-      <h1 class="form-title">Nuevo Eje</h1>
+    <div class="cards-container">
+      <!-- CREATE CARD -->
+      <div class="card create-card">
+        <h1 class="form-title">Nuevo Eje</h1>
 
-      <!-- Instrucciones -->
-      <div class="instructions">
-        <h2 class="instructions-title">Instrucciones</h2>
-        <ul class="instructions-list">
-          <li>
-            <strong>Nombre del eje:</strong> Nombre que se guardará en la base
-            de datos para identificar este eje vial.
-          </li>
-          <li>
-            <strong>Calles:</strong> Nombres de las calles que conforman el eje.
-            Deben coincidir exactamente con los nombres en
-            <a
-              href="https://www.openstreetmap.org/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="osm-link"
-              >OpenStreetMap</a
-            >. Las calles pueden tener separaciones de hasta 510 metros que
-            serán conectadas automáticamente.
-          </li>
-          <li>
-            <strong>Ciudad:</strong> Nombre de la relación que contiene el eje
-            vial (por defecto: "Provincia de Santiago").
-          </li>
-        </ul>
-      </div>
-
-      <form @submit.prevent="handleSubmit" class="form">
-        <!-- Nombre del Eje -->
-        <div class="form-group">
-          <label for="nombre" class="form-label">Nombre del eje</label>
-          <CustomInput
-            type="text"
-            name="nombre"
-            placeholder="Nombre del eje"
-            :value="formData.nombre"
-            @input="updateNombre"
-            :hideLabel="true"
-          />
+        <!-- Instrucciones -->
+        <div class="instructions">
+          <h2 class="instructions-title">Instrucciones</h2>
+          <ul class="instructions-list">
+            <li>
+              <strong>Nombre del eje:</strong> Nombre que se guardará en la base
+              de datos para identificar este eje vial.
+            </li>
+            <li>
+              <strong>Calles:</strong> Nombres de las calles que conforman el
+              eje. Deben coincidir exactamente con los nombres en
+              <a
+                href="https://www.openstreetmap.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="osm-link"
+                >OpenStreetMap</a
+              >. Las calles pueden tener separaciones de hasta 510 metros que
+              serán conectadas automáticamente.
+            </li>
+            <li>
+              <strong>Ciudad:</strong> Nombre de la relación que contiene el eje
+              vial (por defecto: "Provincia de Santiago").
+            </li>
+          </ul>
         </div>
 
-        <!-- Calles -->
-        <div class="form-group">
-          <label class="form-label">Calles</label>
-
-          <div class="streets-list">
-            <div
-              v-for="(street, index) in formData.calles"
-              :key="index"
-              class="street-item"
-            >
-              <CustomInput
-                type="text"
-                :name="`calle-${index}`"
-                placeholder="Nombre de la calle"
-                :value="street"
-                @input="(value) => updateStreet(index, value)"
-              />
-              <button
-                v-if="formData.calles.length > 1"
-                type="button"
-                class="remove-street-btn"
-                @click="removeStreet(index)"
-                title="Quitar calle"
-              >
-                ✕
-              </button>
-            </div>
-            <CustomButton
-              type="button"
-              text="+ Agregar Calle"
-              :method="addStreet"
-              class="add-street-button"
+        <form @submit.prevent="handleSubmit" class="form">
+          <!-- Nombre del Eje -->
+          <div class="form-group">
+            <label for="nombre" class="form-label">Nombre del eje</label>
+            <CustomInput
+              type="text"
+              name="nombre"
+              placeholder="Nombre del eje"
+              :value="formData.nombre"
+              @input="updateNombre"
+              :hideLabel="true"
             />
           </div>
-        </div>
 
-        <!-- Ciudad -->
-        <div class="form-group">
-          <label for="ciudad" class="form-label">Ciudad</label>
-          <CustomInput
-            type="text"
-            name="ciudad"
-            placeholder="Provincia de Santiago"
-            :value="formData.ciudad"
-            @input="updateCiudad"
-            :hideLabel="true"
-          />
-        </div>
+          <!-- Calles -->
+          <div class="form-group">
+            <label class="form-label">Calles</label>
 
-        <div v-if="errorMsg || exitoMsg" class="status-messages">
-          <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
-          <p v-if="exitoMsg" class="success-msg">{{ exitoMsg }}</p>
-        </div>
+            <div class="streets-list">
+              <div
+                v-for="(street, index) in formData.calles"
+                :key="index"
+                class="street-item"
+              >
+                <CustomInput
+                  type="text"
+                  :name="`calle-${index}`"
+                  placeholder="Nombre de la calle"
+                  :value="street"
+                  @input="(value) => updateStreet(index, value)"
+                />
+                <button
+                  v-if="formData.calles.length > 1"
+                  type="button"
+                  class="remove-street-btn"
+                  @click="removeStreet(index)"
+                  title="Quitar calle"
+                >
+                  ✕
+                </button>
+              </div>
+              <CustomButton
+                type="button"
+                text="+ Agregar Calle"
+                :method="addStreet"
+                class="add-street-button"
+              />
+            </div>
+          </div>
 
-        <!-- Form Actions -->
-        <div class="form-actions">
-          <CustomButton type="button" text="Limpiar" :method="resetForm" />
-          <button
-            class="custom-button submit"
-            type="submit"
-            :disabled="cargando || procesando"
-          >
-            {{
-              procesando
-                ? "Procesando geometría..."
-                : cargando
-                ? "Guardando..."
-                : "Guardar"
-            }}
-          </button>
-        </div>
-      </form>
+          <!-- Ciudad -->
+          <div class="form-group">
+            <label for="ciudad" class="form-label">Ciudad</label>
+            <CustomInput
+              type="text"
+              name="ciudad"
+              placeholder="Provincia de Santiago"
+              :value="formData.ciudad"
+              @input="updateCiudad"
+              :hideLabel="true"
+            />
+          </div>
 
-      <!-- Separator -->
-      <hr class="section-divider" />
+          <div v-if="errorMsg || exitoMsg" class="status-messages">
+            <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+            <p v-if="exitoMsg" class="success-msg">{{ exitoMsg }}</p>
+          </div>
 
-      <!-- Delete Section -->
-      <div class="delete-section">
-        <h2 class="section-title">Eliminar Eje</h2>
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <CustomButton type="button" text="Limpiar" :method="resetForm" />
+            <button
+              class="custom-button submit"
+              type="submit"
+              :disabled="cargando || procesando"
+            >
+              {{
+                procesando
+                  ? "Procesando geometría..."
+                  : cargando
+                  ? "Guardando..."
+                  : "Guardar"
+              }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- DELETE CARD -->
+      <div class="card delete-card">
+        <h1 class="form-title delete-title">Eliminar Eje</h1>
         <p class="section-description">
           Seleccione un eje de la lista para eliminarlo. Esta acción eliminará
           también todos los datos asociados (shapes, segmentos, velocidades,
@@ -415,14 +442,30 @@ onMounted(() => {
   align-items: flex-start;
 }
 
-.form-container {
+.cards-container {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  max-width: 1200px;
+  margin-top: 20px;
+  align-items: flex-start;
+}
+
+.card {
   background: white;
   border-radius: 12px;
   padding: 32px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 600px;
-  margin-top: 20px;
+  flex: 1;
+  min-width: 0;
+}
+
+.create-card {
+  flex: 1.2;
+}
+
+.delete-card {
+  flex: 0.8;
 }
 
 .form-title {
@@ -576,21 +619,8 @@ onMounted(() => {
 }
 
 /* Delete Section Styles */
-.section-divider {
-  border: none;
-  border-top: 2px solid #e9ecef;
-  margin: 40px 0;
-}
-
-.delete-section {
-  margin-top: 0;
-}
-
-.section-title {
+.delete-title {
   color: #dc3545;
-  font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 12px;
 }
 
 .section-description {
@@ -718,12 +748,29 @@ onMounted(() => {
 }
 
 /* Responsive design */
+@media (max-width: 992px) {
+  .cards-container {
+    flex-direction: column;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .create-card,
+  .delete-card {
+    flex: 1;
+  }
+}
+
 @media (max-width: 768px) {
   .place-streets-form {
     padding: 12px;
   }
 
-  .form-container {
+  .card {
     padding: 24px;
   }
 
