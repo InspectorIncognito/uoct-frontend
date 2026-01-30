@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import AxlesAPI from "@/components/api/AxlesAPI";
+import AxlesAPI, { type Axle } from "@/components/api/AxlesAPI";
 import CustomButton from "@/components/form/CustomButton.vue";
 import CustomInput from "@/components/form/CustomInput.vue";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 
 interface FormData {
   nombre: string; // eje / axis name
@@ -111,6 +111,73 @@ const resetForm = () => {
     ciudad: "Provincia de Santiago",
   };
 };
+
+// ========== DELETE SECTION ==========
+const axlesList = ref<Axle[]>([]);
+const selectedAxleId = ref<number | null>(null);
+const loadingAxles = ref(false);
+const deletingAxle = ref(false);
+const deleteErrorMsg = ref("");
+const deleteSuccessMsg = ref("");
+
+const fetchAxles = async () => {
+  loadingAxles.value = true;
+  deleteErrorMsg.value = "";
+  try {
+    const { data } = await AxlesAPI.getAll();
+    axlesList.value = data || [];
+  } catch (err: any) {
+    console.error("Error al cargar ejes:", err);
+    deleteErrorMsg.value = "Error al cargar la lista de ejes";
+  } finally {
+    loadingAxles.value = false;
+  }
+};
+
+const selectedAxle = () => {
+  return axlesList.value.find((a) => a.id === selectedAxleId.value);
+};
+
+const handleDelete = async () => {
+  if (!selectedAxleId.value) {
+    alert("Seleccione un eje para eliminar");
+    return;
+  }
+
+  const axle = selectedAxle();
+  const confirmMsg = axle?.has_shapes
+    ? `¿Está seguro de eliminar el eje "${axle.name}"?\n\nEsto eliminará también ${axle.shapes_count} shape(s) y todos los datos asociados (segmentos, velocidades, alertas, etc.).`
+    : `¿Está seguro de eliminar el eje "${axle?.name}"?`;
+
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+
+  deletingAxle.value = true;
+  deleteErrorMsg.value = "";
+  deleteSuccessMsg.value = "";
+
+  try {
+    const { data } = await AxlesAPI.delete(selectedAxleId.value);
+    deleteSuccessMsg.value = data?.message || "Eje eliminado exitosamente";
+    console.log("Eje eliminado:", data);
+    selectedAxleId.value = null;
+    // Refresh the list
+    await fetchAxles();
+  } catch (err: any) {
+    console.error("Error al eliminar eje:", err);
+    deleteErrorMsg.value = err?.response?.data?.error
+      ? err.response.data.error
+      : "Error al eliminar el eje";
+  } finally {
+    deletingAxle.value = false;
+  }
+};
+
+// Load axles on mount
+onMounted(() => {
+  fetchAxles();
+});
 </script>
 
 <template>
@@ -231,6 +298,98 @@ const resetForm = () => {
           </button>
         </div>
       </form>
+
+      <!-- Separator -->
+      <hr class="section-divider" />
+
+      <!-- Delete Section -->
+      <div class="delete-section">
+        <h2 class="section-title">Eliminar Eje</h2>
+        <p class="section-description">
+          Seleccione un eje de la lista para eliminarlo. Esta acción eliminará
+          también todos los datos asociados (shapes, segmentos, velocidades,
+          alertas, etc.).
+        </p>
+
+        <div class="form-group">
+          <label for="axle-select" class="form-label">Eje a eliminar</label>
+          <div class="select-wrapper">
+            <select
+              id="axle-select"
+              v-model="selectedAxleId"
+              class="axle-select"
+              :disabled="loadingAxles || deletingAxle"
+            >
+              <option :value="null" disabled>
+                {{ loadingAxles ? "Cargando ejes..." : "Seleccione un eje" }}
+              </option>
+              <option v-for="axle in axlesList" :key="axle.id" :value="axle.id">
+                {{ axle.name }}
+                {{
+                  axle.has_shapes
+                    ? `(${axle.shapes_count} shapes)`
+                    : "(sin procesar)"
+                }}
+              </option>
+            </select>
+            <button
+              type="button"
+              class="refresh-btn"
+              @click="fetchAxles"
+              :disabled="loadingAxles"
+              title="Actualizar lista"
+            >
+              ↻
+            </button>
+          </div>
+        </div>
+
+        <!-- Selected Axle Info -->
+        <div v-if="selectedAxle()" class="axle-info">
+          <h4>Información del eje seleccionado:</h4>
+          <ul>
+            <li><strong>Nombre:</strong> {{ selectedAxle()?.name }}</li>
+            <li><strong>Ciudad:</strong> {{ selectedAxle()?.city }}</li>
+            <li>
+              <strong>Calles:</strong> {{ selectedAxle()?.streets.join(", ") }}
+            </li>
+            <li>
+              <strong>Estado:</strong>
+              <span
+                :class="
+                  selectedAxle()?.has_shapes
+                    ? 'status-processed'
+                    : 'status-pending'
+                "
+              >
+                {{
+                  selectedAxle()?.has_shapes
+                    ? `Procesado (${selectedAxle()?.shapes_count} shapes)`
+                    : "Sin procesar"
+                }}
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <div v-if="deleteErrorMsg || deleteSuccessMsg" class="status-messages">
+          <p v-if="deleteErrorMsg" class="error-msg">{{ deleteErrorMsg }}</p>
+          <p v-if="deleteSuccessMsg" class="success-msg">
+            {{ deleteSuccessMsg }}
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            class="delete-button"
+            @click="handleDelete"
+            :disabled="!selectedAxleId || deletingAxle"
+          >
+            {{ deletingAxle ? "Eliminando..." : "Eliminar Eje" }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -403,6 +562,148 @@ const resetForm = () => {
 .success-msg {
   color: #198754;
   font-size: 14px;
+}
+
+/* Delete Section Styles */
+.section-divider {
+  border: none;
+  border-top: 2px solid #e9ecef;
+  margin: 40px 0;
+}
+
+.delete-section {
+  margin-top: 0;
+}
+
+.section-title {
+  color: #dc3545;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.section-description {
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.select-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.axle-select {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #495057;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.axle-select:focus {
+  outline: none;
+  border-color: #31304d;
+  box-shadow: 0 0 0 3px rgba(49, 48, 77, 0.1);
+}
+
+.axle-select:disabled {
+  background: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.refresh-btn {
+  background: #31304d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  transition: background 0.2s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #4a4970;
+}
+
+.refresh-btn:disabled {
+  background: #adb5bd;
+  cursor: not-allowed;
+}
+
+.axle-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.axle-info h4 {
+  color: #31304d;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.axle-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.axle-info li {
+  color: #495057;
+  font-size: 13px;
+}
+
+.axle-info strong {
+  color: #31304d;
+}
+
+.status-processed {
+  color: #198754;
+  font-weight: 500;
+}
+
+.status-pending {
+  color: #ffc107;
+  font-weight: 500;
+}
+
+.delete-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.delete-button:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.delete-button:disabled {
+  background: #f5c6cb;
+  cursor: not-allowed;
 }
 
 /* Responsive design */

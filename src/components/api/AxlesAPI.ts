@@ -17,6 +17,31 @@ export interface ProcessAxisPayload {
   distance_threshold?: number;
 }
 
+export interface Axle {
+  id: number;
+  name: string;
+  streets: string[];
+  city: string;
+  has_shapes: boolean;
+  shapes_count: number;
+}
+
+export interface DeleteAxleResponse {
+  status: string;
+  message: string;
+  deleted: {
+    shapes: number;
+    segments: number;
+    speeds: number;
+    historic_speeds: number;
+    alerts: number;
+    services: number;
+    stops: number;
+    cameras: number;
+    traffic_signals: number;
+  };
+}
+
 class AxlesAPI {
   public static create(payload: AxlePayload) {
     APIService.setHeader();
@@ -33,6 +58,25 @@ class AxlesAPI {
     APIService.setHeader();
     const params = { data: payload };
     return APIService.post(`${RESOURCE}process/`, params);
+  }
+
+  /**
+   * Get all axles from the backend.
+   * @returns Promise with array of Axle objects
+   */
+  public static getAll() {
+    APIService.setHeader();
+    return APIService.get(RESOURCE);
+  }
+
+  /**
+   * Delete an axle by ID. This will also delete all associated shapes,
+   * segments, speeds, alerts, etc.
+   * @param id - The ID of the axle to delete
+   */
+  public static delete(id: number) {
+    APIService.setHeader();
+    return APIService.delete(`${RESOURCE}${id}/`);
   }
 }
 
