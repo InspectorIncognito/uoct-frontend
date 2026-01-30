@@ -66,7 +66,8 @@ class AxlesAPI {
    */
   public static getAll() {
     APIService.setHeader();
-    return APIService.get(RESOURCE);
+    // Use query to avoid double slash issue with get method
+    return APIService.query(RESOURCE, {});
   }
 
   /**

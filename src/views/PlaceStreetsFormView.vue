@@ -125,7 +125,13 @@ const fetchAxles = async () => {
   deleteErrorMsg.value = "";
   try {
     const { data } = await AxlesAPI.getAll();
-    axlesList.value = data || [];
+    console.log("Respuesta API getAll:", data);
+    // Filter out any invalid entries that don't have an id
+    const validAxles = (Array.isArray(data) ? data : []).filter(
+      (a: Axle) => a && a.id !== null && a.id !== undefined,
+    );
+    console.log("Ejes válidos:", validAxles);
+    axlesList.value = validAxles;
   } catch (err: any) {
     console.error("Error al cargar ejes:", err);
     deleteErrorMsg.value = "Error al cargar la lista de ejes";
@@ -324,7 +330,11 @@ onMounted(() => {
               <option :value="null" disabled>
                 {{ loadingAxles ? "Cargando ejes..." : "Seleccione un eje" }}
               </option>
-              <option v-for="axle in axlesList" :key="axle.id" :value="axle.id">
+              <option
+                v-for="axle in axlesList"
+                :key="axle.id ?? `axle-${Math.random()}`"
+                :value="axle.id"
+              >
                 {{ axle.name }}
                 {{
                   axle.has_shapes
