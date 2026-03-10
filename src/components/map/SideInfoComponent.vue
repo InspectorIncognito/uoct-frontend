@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 
 defineProps({
   date: Date,
@@ -8,20 +8,32 @@ defineProps({
 });
 
 const show = ref(true);
+let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
 function toggleShow() {
   show.value = !show.value;
 }
 
 onMounted(() => {
-  setTimeout(() => {
+  hideTimer = setTimeout(() => {
     show.value = false;
   }, 5000);
+});
+
+onUnmounted(() => {
+  if (hideTimer !== null) {
+    clearTimeout(hideTimer);
+    hideTimer = null;
+  }
 });
 </script>
 
 <template>
-  <div class="update-status-container" :style="`top: ${top}vh;`" :class="show ? 'show' : 'hide'">
+  <div
+    class="update-status-container"
+    :style="`top: ${top}vh;`"
+    :class="show ? 'show' : 'hide'"
+  >
     <span class="material-icons update-status-button" @click="toggleShow">
       {{ show ? "chevron_right" : "chevron_left" }}
     </span>

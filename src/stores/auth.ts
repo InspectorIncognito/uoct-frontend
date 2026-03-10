@@ -19,7 +19,7 @@ export interface Credentials {
 }
 
 export const useAuthStore = defineStore("auth", () => {
-  const user = ref({
+  const user = ref<User>({
     first_name: "",
     last_name: "",
     email: "",
@@ -30,6 +30,14 @@ export const useAuthStore = defineStore("auth", () => {
   const getUsername = computed(
     () => `${user.value.first_name} ${user.value.last_name}`
   );
+
+  // Optional callback invoked by the router to reset its session-verified flag
+  // when purgeAuth() is called, without creating a circular import.
+  let onPurgeCallback: (() => void) | null = null;
+
+  function setOnPurgeCallback(cb: () => void) {
+    onPurgeCallback = cb;
+  }
 
   function setAuth(userParam: UserFromServer) {
     const token = userParam.token;
@@ -42,6 +50,7 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated.value = false;
     user.value = {} as User;
     JWTService.destroyToken();
+    onPurgeCallback?.();
   }
 
   function login(credentials: Credentials) {
@@ -51,14 +60,15 @@ export const useAuthStore = defineStore("auth", () => {
           setAuth(data);
           resolve(data);
         })
-        .catch(({ response }) => {
-          console.log(response.data);
-          reject(response.data);
+        .catch((error) => {
+          const msg = error?.response?.data ?? error?.message;
+          console.log(msg);
+          reject(msg);
         });
     });
   }
 
-  function verify() {
+  function verify(): Promise<void> {
     if (JWTService.getToken()) {
       return new Promise<void>((resolve, reject) => {
         APIUser.verify()
@@ -66,13 +76,15 @@ export const useAuthStore = defineStore("auth", () => {
             setAuth(data);
             resolve(data);
           })
-          .catch(({ response }) => {
-            console.log(response.data);
-            reject(response.data);
+          .catch((error) => {
+            const msg = error?.response?.data ?? error?.message;
+            console.log(msg);
+            reject(msg);
           });
       });
     } else {
       purgeAuth();
+      return Promise.resolve();
     }
   }
 
@@ -82,6 +94,7 @@ export const useAuthStore = defineStore("auth", () => {
     getEmail,
     getUsername,
     purgeAuth,
+    setOnPurgeCallback,
     login,
     verify,
   };

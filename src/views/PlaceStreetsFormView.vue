@@ -87,7 +87,7 @@ const handleSubmit = async () => {
       console.error("Error al procesar el eje:", processErr);
       errorMsg.value = processErr?.response?.data
         ? `Eje creado pero error al procesar: ${JSON.stringify(
-            processErr.response.data,
+            processErr.response.data
           )}`
         : `Eje creado pero error al procesar la geometría`;
     } finally {
@@ -154,7 +154,7 @@ const fetchAxles = async () => {
 
     // Filter out any invalid entries that don't have an id
     const validAxles = allAxles.filter(
-      (a: Axle) => a && a.id !== null && a.id !== undefined,
+      (a: Axle) => a && a.id !== null && a.id !== undefined
     );
     console.log("Total ejes cargados:", validAxles.length);
     axlesList.value = validAxles;
@@ -369,8 +369,8 @@ onMounted(() => {
                 {{ loadingAxles ? "Cargando ejes..." : "Seleccione un eje" }}
               </option>
               <option
-                v-for="axle in axlesList"
-                :key="axle.id ?? `axle-${Math.random()}`"
+                v-for="(axle, index) in axlesList"
+                :key="axle.id ?? `axle-${index}`"
                 :value="axle.id"
               >
                 {{ axle.name }}

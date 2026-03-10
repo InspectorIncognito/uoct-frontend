@@ -94,7 +94,7 @@ class SpeedAPI {
     }
     if (dayType !== false) query_params.push(`dayType=${dayType}`);
     if (temporalSegment !== -1)
-      query_params.push(`&temporalSegment=${temporalSegment}`);
+      query_params.push(`temporalSegment=${temporalSegment}`);
     slug += query_params.join("&");
     return APIService.get(endpoint, slug);
   }

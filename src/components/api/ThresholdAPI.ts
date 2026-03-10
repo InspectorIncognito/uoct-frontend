@@ -1,5 +1,4 @@
 import APIService from "@/components/api/APIService";
-import APIUser from "@/components/api/UserAPI";
 
 class ThresholdAPI {
   public static get() {

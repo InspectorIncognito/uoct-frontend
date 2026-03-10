@@ -39,12 +39,9 @@
 </template>
 -->
 <script setup lang="ts">
-import { RouterLink, RouterView, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { useI18n } from "vue-i18n";
-import NavigationComponent from "@/components/NavigationComponent.vue";
 
-const { t } = useI18n();
 const authStore = useAuthStore();
 const router = useRouter();
 

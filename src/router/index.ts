@@ -45,23 +45,33 @@ const router = createRouter({
   ],
 });
 
+// Whether the session has already been verified this page load.
+// Reset to false whenever purgeAuth() is called so the next navigation
+// re-verifies from scratch.
+let sessionVerified = false;
+// Guard flag: register the purge callback only once.
+let callbackRegistered = false;
+
 router.beforeEach(async (to, from, next) => {
-  // check user session
   const authStore = useAuthStore();
 
-  // Skip verification in development mode if using dev token
-  const isDevelopment = import.meta.env.MODE === "development";
-  const hasDevToken =
-    authStore.isAuthenticated &&
-    (authStore.user.email === "testuser@example.com" ||
-      localStorage.getItem("token") === "dev-token-123");
+  // Register a callback on the store so that when purgeAuth() is called
+  // (e.g. logout) we reset sessionVerified without creating a circular import.
+  if (!callbackRegistered) {
+    authStore.setOnPurgeCallback(() => {
+      sessionVerified = false;
+    });
+    callbackRegistered = true;
+  }
 
-  if (!isDevelopment || !hasDevToken) {
+  // Only hit the network once per page load (or after logout).
+  if (!sessionVerified) {
     try {
       await authStore.verify();
     } catch (error) {
       authStore.purgeAuth();
     }
+    sessionVerified = true;
   }
 
   if (authStore.isAuthenticated || to.name === "login") {

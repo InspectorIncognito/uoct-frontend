@@ -13,7 +13,7 @@ import { Cron } from "croner";
 import { ElNotification } from "element-plus";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { h, onMounted, ref, render } from "vue";
+import { h, onMounted, onUnmounted, ref, render, shallowRef } from "vue";
 
 interface AlertData {
   coords: number[];
@@ -40,22 +40,25 @@ const COLOR_DATA = [
   { color: "#DDDDDD", info: "Sin datos" },
 ];
 
-const style = ref("mapbox://styles/mapbox/dark-v10");
-
 const mapContainer = ref<HTMLElement>();
-const map = ref<InstanceType<typeof mapboxgl.Map> | null>(null);
-const popup = ref<InstanceType<typeof mapboxgl.Popup> | null>(null);
-const currentGeoJson = ref<unknown>(null);
+
+// Use shallowRef for Mapbox objects to prevent Vue from deep-proxying their
+// internal mutable state, which causes overhead and potential corruption.
+const map = shallowRef<mapboxgl.Map | null>(null);
+const popup = shallowRef<mapboxgl.Popup | null>(null);
+
+const currentDate = ref(new Date());
+
+const markerList = shallowRef<mapboxgl.Marker[]>([]);
+const cameraMarkerList = shallowRef<mapboxgl.Marker[]>([]);
+
+// Cron job reference — stored so we can stop it in onUnmounted.
+let cronJob: ReturnType<typeof Cron> | null = null;
 
 const geoJsonSourceId = "geojson-source";
 const geoJsonLayerId = "geojson-layer";
 const selectedGeoJsonSourceId = "selected-geojson-source";
 const selectedGeoJsonLayerId = "selected-geojson-layer";
-
-const currentDate = ref(new Date());
-
-const markerList = ref<InstanceType<typeof mapboxgl.Marker>[]>([]);
-const cameraMarkerList = ref<InstanceType<typeof mapboxgl.Marker>[]>([]);
 
 // Camera SVG icon (returns SVG with dynamic size)
 function getCameraSvgIcon(width: number, height: number): string {
@@ -66,7 +69,6 @@ function getCameraSvgIcon(width: number, height: number): string {
 
 // Calculate camera icon size based on zoom level
 function getCameraIconSize(zoom: number): { width: number; height: number } {
-  // Base size at zoom 14, scales proportionally
   const baseZoom = 14;
   const baseWidth = 24;
   const baseHeight = 16;
@@ -82,7 +84,7 @@ function getCameraIconSize(zoom: number): { width: number; height: number } {
 function initializeMap() {
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
   map.value = new mapboxgl.Map({
-    container: mapContainer.value,
+    container: mapContainer.value!,
     style: "mapbox://styles/mapbox/dark-v10",
     center: [-70.65387, -33.443018],
     zoom: 14,
@@ -97,14 +99,11 @@ function initializeMap() {
 
 function formatTemporalSegmentToSantiago(utcIdx: number) {
   if (!utcIdx && utcIdx !== 0) return "";
-
-  // Convert UTC temporal segment index to Santiago timezone
   const referenceDate = new Date();
   const localIdx = temporalSegmentFromUTCIndex(utcIdx, referenceDate);
-
-  // Format the local temporal segment
   return parseTemporalSegment(localIdx);
 }
+
 function getAlertPopupContent(
   keyValue: string,
   useful: number,
@@ -141,7 +140,21 @@ function getPopupContent(feature: any) {
   });
 }
 
-function onFeatureClick(e: any) {
+/**
+ * Mount a Vue VNode into a container and return a cleanup function that
+ * properly unmounts the component tree when the popup closes.
+ */
+function renderWithCleanup(
+  vnode: ReturnType<typeof h>,
+  container: HTMLElement
+) {
+  render(vnode, container);
+  return () => render(null, container);
+}
+
+function onFeatureClick(
+  e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }
+) {
   const feature = e.features?.[0];
   if (!feature || !map.value) return;
 
@@ -152,12 +165,18 @@ function onFeatureClick(e: any) {
       className: "custom-popup",
     });
   }
+
   const popupContent = document.createElement("div");
-  const componentVNode = getPopupContent(feature);
-  render(componentVNode, popupContent);
+  const cleanup = renderWithCleanup(getPopupContent(feature), popupContent);
+  // Unmount the Vue component tree when the popup is closed to avoid leaks.
+  popup.value.once("close", cleanup);
+
   popup.value.setDOMContent(popupContent);
   popup.value.setLngLat(e.lngLat).addTo(map.value);
-  const source = map.value.getSource(selectedGeoJsonSourceId) as any;
+
+  const source = map.value.getSource(selectedGeoJsonSourceId) as
+    | mapboxgl.GeoJSONSource
+    | undefined;
   source?.setData({
     type: "FeatureCollection",
     features: [feature],
@@ -182,6 +201,11 @@ async function updateGeoJson() {
   if (!map.value) return;
 
   if (map.value.getSource(geoJsonSourceId)) {
+    // Remove existing event listeners BEFORE removing the layer/source
+    // to prevent accumulation of duplicate listeners on every refresh.
+    map.value.off("click", geoJsonLayerId, onFeatureClick);
+    map.value.off("mouseenter", geoJsonLayerId, onMouseEnterFeature);
+    map.value.off("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
     map.value.removeLayer(geoJsonLayerId);
     map.value.removeSource(geoJsonSourceId);
   }
@@ -196,8 +220,6 @@ async function updateGeoJson() {
     type: "line",
     source: geoJsonSourceId,
     paint: {
-      // Use the color property from the backend data.
-      // If `color` is missing, fall back to a gray color (Sin datos).
       "line-color": ["coalesce", ["get", "color"], "#DDDDDD"],
       "line-width": 4,
     },
@@ -216,7 +238,8 @@ async function updateGeoJson() {
       },
     });
   }
-  currentGeoJson.value = response.data;
+
+  // Register event listeners exactly once after (re)adding the layer.
   map.value.on("click", geoJsonLayerId, onFeatureClick);
   map.value.on("mouseenter", geoJsonLayerId, onMouseEnterFeature);
   map.value.on("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
@@ -246,37 +269,37 @@ function getTime(date: Date) {
   return `${hours}:${minutes}:${seconds}`;
 }
 
-function hideMarker(marker: InstanceType<typeof mapboxgl.Marker>) {
+function hideMarker(marker: mapboxgl.Marker) {
   marker.remove();
 }
 
-function showMarker(marker: InstanceType<typeof mapboxgl.Marker>) {
+function showMarker(marker: mapboxgl.Marker) {
   if (!map.value) return;
   marker.addTo(map.value);
 }
 
-function createPopup(
-  alertData: AlertData,
-  marker: InstanceType<typeof mapboxgl.Marker>
-) {
+function createPopup(alertData: AlertData, marker: mapboxgl.Marker) {
   const keyValue = alertData.key_value;
   const coords = alertData.coords;
   const useful = alertData.useful;
   const useless = alertData.useless;
 
-  const popup = new mapboxgl.Popup({
+  const alertPopup = new mapboxgl.Popup({
     closeButton: true,
     closeOnClick: false,
     className: "custom-popup",
   });
   const popupContent = document.createElement("div");
-  const componentVNode = getAlertPopupContent(keyValue, useful, useless);
-  render(componentVNode, popupContent);
-  popup.setDOMContent(popupContent);
-  popup.setLngLat(coords);
+  const cleanup = renderWithCleanup(
+    getAlertPopupContent(keyValue, useful, useless),
+    popupContent
+  );
+  alertPopup.setDOMContent(popupContent);
+  alertPopup.setLngLat(coords);
   hideMarker(marker);
-  if (map.value) popup.addTo(map.value);
-  popup.on("close", () => {
+  if (map.value) alertPopup.addTo(map.value);
+  alertPopup.once("close", () => {
+    cleanup();
     showMarker(marker);
   });
 }
@@ -298,8 +321,10 @@ function showMarkers() {
 }
 
 function clearMarkers() {
+  // Call marker.remove() (not marker.getElement().remove()) to properly
+  // unregister the marker from the Mapbox map instance.
   markerList.value.forEach((marker) => {
-    marker.getElement().remove();
+    marker.remove();
   });
   markerList.value = [];
 }
@@ -307,7 +332,7 @@ function clearMarkers() {
 // Camera marker functions
 function createCameraMarkerElement(): HTMLDivElement {
   const el = document.createElement("div");
-  const zoom = map.value?.getZoom() || 14;
+  const zoom = map.value?.getZoom() ?? 14;
   const { width, height } = getCameraIconSize(zoom);
   el.innerHTML = getCameraSvgIcon(width, height);
   el.style.cursor = "pointer";
@@ -339,7 +364,6 @@ function createCameraMarker(cameraData: CameraData) {
 
   const marker = new mapboxgl.Marker({ element: el }).setLngLat(coords);
 
-  // Create popup for hover
   const cameraPopup = new mapboxgl.Popup({
     closeButton: false,
     closeOnClick: false,
@@ -350,8 +374,11 @@ function createCameraMarker(cameraData: CameraData) {
   el.addEventListener("mouseenter", () => {
     if (!map.value) return;
     const popupContent = document.createElement("div");
-    const componentVNode = getCameraPopupContent(cameraData.camera_id);
-    render(componentVNode, popupContent);
+    const cleanup = renderWithCleanup(
+      getCameraPopupContent(cameraData.camera_id),
+      popupContent
+    );
+    cameraPopup.once("close", cleanup);
     cameraPopup.setDOMContent(popupContent);
     cameraPopup.setLngLat(coords).addTo(map.value);
   });
@@ -371,8 +398,9 @@ function showCameraMarkers() {
 }
 
 function clearCameraMarkers() {
+  // Call marker.remove() to properly unregister from the Mapbox map instance.
   cameraMarkerList.value.forEach((marker) => {
-    marker.getElement().remove();
+    marker.remove();
   });
   cameraMarkerList.value = [];
 }
@@ -380,7 +408,6 @@ function clearCameraMarkers() {
 async function loadCameras() {
   try {
     const response = await MapAPI.getCameras();
-    // Handle both array response and object with cameras property
     const cameras: CameraData[] = Array.isArray(response.data)
       ? response.data
       : response.data.cameras || response.data.results || [];
@@ -398,9 +425,20 @@ onMounted(() => {
   initializeMap();
   updateMap();
   loadCameras();
-  Cron("59 0/15 * * * *", () => {
+  // Store the cron job reference so it can be stopped when the component unmounts.
+  cronJob = Cron("59 0/15 * * * *", () => {
     updateMap();
   });
+});
+
+onUnmounted(() => {
+  // Stop the background polling to prevent runaway cron jobs if the component
+  // is ever unmounted and remounted (e.g. during route navigation).
+  cronJob?.stop();
+  cronJob = null;
+  // Remove the map instance to free GPU/memory resources.
+  map.value?.remove();
+  map.value = null;
 });
 </script>
 <template>

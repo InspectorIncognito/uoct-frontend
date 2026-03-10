@@ -53,7 +53,7 @@ const totalPages = ref<number>(1);
 function downloadHistoricSpeeds(
   month: number,
   dayType: string | boolean,
-  temporalSegment: number,
+  temporalSegment: number
 ) {
   // Usar el endpoint del backend según el formato seleccionado
   const downloadPromise =
@@ -70,7 +70,7 @@ function downloadHistoricSpeeds(
       selectedTimeFormat.value === "local" ? "_local" : "_utc";
     link.setAttribute(
       "download",
-      `historic_speed_${month_string}${formatSuffix}.csv`,
+      `historic_speed_${month_string}${formatSuffix}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -87,7 +87,7 @@ function updateHistoricSpeedData(
   month: number,
   dayType: string | boolean,
   temporalSegment = -1,
-  usePage = true,
+  usePage = true
 ) {
   loading.value = true;
   if (!usePage) {
@@ -99,7 +99,7 @@ function updateHistoricSpeedData(
       const data = response.data;
       const newTotalCount: number = data.count;
       totalCount.value = newTotalCount;
-      totalPages.value = Math.floor(newTotalCount / 10);
+      totalPages.value = Math.ceil(newTotalCount / 10);
 
       data.results.forEach((obj: any) => {
         // For historic data the response.temporal_segment is likely computed in UTC.
@@ -108,7 +108,7 @@ function updateHistoricSpeedData(
           const refDate = new Date(new Date().getFullYear(), month - 1, 1);
           const localIdx = temporalSegmentFromUTCIndex(
             obj.temporal_segment,
-            refDate,
+            refDate
           );
           obj.temporal_segment = parseTemporalSegment(localIdx);
         } catch (e) {
@@ -133,7 +133,7 @@ function pageUp() {
   updateHistoricSpeedData(
     monthValue.value,
     dayTypeValue.value,
-    selectedTemporalSegment.value,
+    selectedTemporalSegment.value
   );
 }
 
@@ -143,7 +143,7 @@ function pageDown() {
   updateHistoricSpeedData(
     monthValue.value,
     dayTypeValue.value,
-    selectedTemporalSegment.value,
+    selectedTemporalSegment.value
   );
 }
 </script>
@@ -209,7 +209,7 @@ function pageDown() {
               monthValue,
               dayTypeValue,
               selectedTemporalSegment,
-              false,
+              false
             )
           "
           >Aplicar filtros
@@ -282,7 +282,7 @@ function pageDown() {
           downloadHistoricSpeeds(
             monthValue,
             dayTypeValue,
-            selectedTemporalSegment,
+            selectedTemporalSegment
           )
         "
       >
@@ -323,16 +323,6 @@ function pageDown() {
   flex-direction: row;
   gap: 16px;
   padding: 8px 8px;
-}
-
-.download-info {
-  color: white;
-  font-size: 14px;
-}
-
-.download-info {
-  color: white;
-  font-size: 14px;
 }
 
 .download-label {

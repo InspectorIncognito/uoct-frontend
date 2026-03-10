@@ -12,4 +12,15 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "mapbox-gl": ["mapbox-gl"],
+          "element-plus": ["element-plus", "@element-plus/icons-vue"],
+          "vue-vendor": ["vue", "vue-router", "pinia"],
+        },
+      },
+    },
+  },
 });

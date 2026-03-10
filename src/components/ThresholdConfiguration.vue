@@ -3,7 +3,7 @@ import { onMounted, ref } from "vue";
 import ThresholdAPI from "@/components/api/ThresholdAPI";
 import { ElNotification } from "element-plus";
 
-const threshold = ref();
+const threshold = ref<number | null>(null);
 function saveThreshold() {
   ThresholdAPI.update(threshold.value)
     .then(() => {
@@ -37,7 +37,7 @@ onMounted(() => {
       <span class="title">Alert Threshold</span>
     </div>
     <div class="configuration-content">
-      <input v-model="threshold" type="number" placeholder="Ej: 2" />
+      <input v-model.number="threshold" type="number" placeholder="Ej: 2" />
     </div>
     <div class="configuration-content">
       <span>
