@@ -17,8 +17,13 @@ export default defineConfig({
       output: {
         manualChunks: {
           "mapbox-gl": ["mapbox-gl"],
-          "element-plus": ["element-plus", "@element-plus/icons-vue"],
-          "vue-vendor": ["vue", "vue-router", "pinia"],
+          vendor: [
+            "vue",
+            "vue-router",
+            "pinia",
+            "element-plus",
+            "@element-plus/icons-vue",
+          ],
         },
       },
     },
