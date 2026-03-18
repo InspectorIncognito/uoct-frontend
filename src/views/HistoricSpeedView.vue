@@ -43,6 +43,7 @@ const lastMonth = ref();
 const lastDayType = ref();
 
 const loading = ref(false);
+const isDownloading = ref(false);
 
 const tableData = ref<HistoricSpeed[]>();
 
@@ -55,28 +56,34 @@ function downloadHistoricSpeeds(
   dayType: string | boolean,
   temporalSegment: number
 ) {
+  isDownloading.value = true;
+
   // Usar el endpoint del backend según el formato seleccionado
   const downloadPromise =
     selectedTimeFormat.value === "local"
       ? SpeedAPI.downloadHistoricSpeedsLocal(month, dayType, temporalSegment)
       : SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment);
 
-  downloadPromise.then((response) => {
-    const csvData = response.data;
-    const url = window.URL.createObjectURL(new Blob([csvData]));
-    const link = document.createElement("a");
-    link.href = url;
-    const formatSuffix =
-      selectedTimeFormat.value === "local" ? "_local" : "_utc";
-    link.setAttribute(
-      "download",
-      `historic_speed_${month_string}${formatSuffix}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    if (link.parentNode) link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  });
+  downloadPromise
+    .then((response) => {
+      const csvData = response.data;
+      const url = window.URL.createObjectURL(new Blob([csvData]));
+      const link = document.createElement("a");
+      link.href = url;
+      const formatSuffix =
+        selectedTimeFormat.value === "local" ? "_local" : "_utc";
+      link.setAttribute(
+        "download",
+        `historic_speed_${month_string}${formatSuffix}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      if (link.parentNode) link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    })
+    .finally(() => {
+      isDownloading.value = false;
+    });
 }
 
 onMounted(() => {
@@ -278,16 +285,19 @@ function pageDown() {
       </div>
       <div
         class="download-button"
+        :class="{ 'download-button-loading': isDownloading }"
         @click="
-          downloadHistoricSpeeds(
-            monthValue,
-            dayTypeValue,
-            selectedTemporalSegment
-          )
+          !isDownloading &&
+            downloadHistoricSpeeds(
+              monthValue,
+              dayTypeValue,
+              selectedTemporalSegment
+            )
         "
       >
         <div class="download-label">Descargar</div>
-        <span class="material-icons">download</span>
+        <span class="material-icons" v-if="!isDownloading">download</span>
+        <span class="material-icons spinner" v-else>sync</span>
       </div>
     </div>
   </div>
@@ -351,6 +361,24 @@ function pageDown() {
 .download-button span {
   font-size: 24px;
   color: white;
+}
+
+.download-button-loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .table-view {
