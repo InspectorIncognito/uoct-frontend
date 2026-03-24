@@ -48,6 +48,7 @@ const selectedTimeFormat = ref("local");
 
 const lastDayType = ref();
 const loading = ref(false);
+const isDownloading = ref(false);
 
 const tableData = ref<Speed[]>();
 const totalCount = ref<number>(0);
@@ -61,25 +62,37 @@ const sortOrder = ref<"ascending" | "descending" | null>(null);
 function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
   const startTime = new Date(dateTimeValue.value[0]);
   const endTime = new Date(dateTimeValue.value[1]);
-  
-  // Usar el endpoint del backend según el formato seleccionado
-  const downloadPromise = selectedTimeFormat.value === "local"
-    ? SpeedAPI.downloadSpeedsLocal(startTime, endTime, dayType, temporalSegment)
-    : SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment);
 
-  downloadPromise.then((response) => {
-    const csvData = response.data;
-    const url = window.URL.createObjectURL(new Blob([csvData]));
-    const link = document.createElement("a");
-    link.href = url;
-    const formatSuffix =
-      selectedTimeFormat.value === "local" ? "_local" : "_utc";
-    link.setAttribute("download", `speed_${monthString}${formatSuffix}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    if (link.parentNode) link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  });
+  isDownloading.value = true;
+
+  // Usar el endpoint del backend según el formato seleccionado
+  const downloadPromise =
+    selectedTimeFormat.value === "local"
+      ? SpeedAPI.downloadSpeedsLocal(
+          startTime,
+          endTime,
+          dayType,
+          temporalSegment
+        )
+      : SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment);
+
+  downloadPromise
+    .then((response) => {
+      const csvData = response.data;
+      const url = window.URL.createObjectURL(new Blob([csvData]));
+      const link = document.createElement("a");
+      link.href = url;
+      const formatSuffix =
+        selectedTimeFormat.value === "local" ? "_local" : "_utc";
+      link.setAttribute("download", `speed_${monthString}${formatSuffix}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      if (link.parentNode) link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    })
+    .finally(() => {
+      isDownloading.value = false;
+    });
 }
 
 function updateSpeedData(
@@ -322,10 +335,15 @@ onMounted(() => {
       </div>
       <div
         class="download-button"
-        @click="downloadSpeeds(dayTypeValue, selectedTemporalSegment)"
+        :class="{ 'download-button-loading': isDownloading }"
+        @click="
+          !isDownloading &&
+            downloadSpeeds(dayTypeValue, selectedTemporalSegment)
+        "
       >
         <div class="download-label">Descargar</div>
-        <span class="material-icons">download</span>
+        <span class="material-icons" v-if="!isDownloading">download</span>
+        <span class="material-icons spinner" v-else>sync</span>
       </div>
     </div>
   </div>
@@ -394,6 +412,24 @@ onMounted(() => {
 .download-button span {
   font-size: 24px;
   color: white;
+}
+
+.download-button-loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .table-view {
