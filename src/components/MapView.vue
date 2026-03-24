@@ -131,12 +131,26 @@ function getPopupContent(feature: any) {
     feature.properties.temporal_segment
   );
 
+  // Parse cut_intersection if it exists (comes as JSON string from GeoJSON)
+  let cutIntersection = null;
+  if (feature.properties?.cut_intersection) {
+    try {
+      cutIntersection =
+        typeof feature.properties.cut_intersection === "string"
+          ? JSON.parse(feature.properties.cut_intersection)
+          : feature.properties.cut_intersection;
+    } catch (e) {
+      console.warn("Failed to parse cut_intersection:", e);
+    }
+  }
+
   return h(SegmentPopup, {
     sequence: sequence,
     shapeId: shapeId,
     speed: speedValue,
     historicSpeed: historicSpeedValue,
     temporalRange: temporalRange,
+    cutIntersection: cutIntersection,
   });
 }
 
