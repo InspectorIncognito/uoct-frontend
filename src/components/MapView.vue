@@ -4,6 +4,7 @@ import AlertPopup from "@/components/map/AlertPopup.vue";
 import CameraPopup from "@/components/map/CameraPopup.vue";
 import SegmentPopup from "@/components/map/SegmentPopup.vue";
 import SpeedInfoComponent from "@/components/map/SpeedInfoComponent.vue";
+import TrafficSignalPopup from "@/components/map/TrafficSignalPopup.vue";
 import UpdateStatusComponent from "@/components/map/UpdateStatusComponent.vue";
 import {
   parseTemporalSegment,
@@ -26,6 +27,14 @@ interface CameraData {
   camera_id: string;
   latitude: number;
   longitude: number;
+}
+
+interface TrafficSignalData {
+  id: number;
+  osm_id: string;
+  intersecting_ways: number | string;
+  longitude: number;
+  latitude: number;
 }
 
 const COLOR_DATA = [
@@ -51,6 +60,7 @@ const currentDate = ref(new Date());
 
 const markerList = shallowRef<mapboxgl.Marker[]>([]);
 const cameraMarkerList = shallowRef<mapboxgl.Marker[]>([]);
+const trafficSignalMarkerList = shallowRef<mapboxgl.Marker[]>([]);
 
 // Cron job reference — stored so we can stop it in onUnmounted.
 let cronJob: ReturnType<typeof Cron> | null = null;
@@ -81,6 +91,26 @@ function getCameraIconSize(zoom: number): { width: number; height: number } {
   };
 }
 
+// Traffic signal SVG icon (returns SVG with dynamic size)
+function getTrafficSignalSvgIcon(size: number): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="7" y="2" width="10" height="20" rx="2" fill="#333" stroke="#555" stroke-width="1"/>
+<circle cx="12" cy="6" r="2.5" fill="#e74c3c"/>
+<circle cx="12" cy="12" r="2.5" fill="#f39c12"/>
+<circle cx="12" cy="18" r="2.5" fill="#2ecc71"/>
+</svg>`;
+}
+
+// Calculate traffic signal icon size based on zoom level
+function getTrafficSignalIconSize(zoom: number): number {
+  const baseZoom = 14;
+  const baseSize = 20;
+  const scale = Math.pow(2, zoom - baseZoom);
+  // Clamp scale between 0.25 and 2 to avoid too small or too large icons
+  const clampedScale = Math.max(0.25, Math.min(2, scale));
+  return Math.round(baseSize * clampedScale);
+}
+
 function initializeMap() {
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
   map.value = new mapboxgl.Map({
@@ -94,6 +124,7 @@ function initializeMap() {
   // Update camera marker sizes when zoom changes
   map.value.on("zoom", () => {
     updateCameraMarkerSizes();
+    updateTrafficSignalMarkerSizes();
   });
 }
 
@@ -122,9 +153,16 @@ function getCameraPopupContent(cameraId: string) {
   });
 }
 
+function getTrafficSignalPopupContent(osmId: string, intersectingWays: number) {
+  return h(TrafficSignalPopup, {
+    osmId: osmId,
+    intersectingWays: intersectingWays,
+  });
+}
+
 function getPopupContent(feature: any) {
   const sequence = Number(feature.properties?.sequence);
-  const shapeId = feature.properties?.shape_id;
+  const shapeId = String(feature.properties?.shape_id ?? "");
   const speedValue = Number(feature.properties.speed);
   const historicSpeedValue = Number(feature.properties.historic_speed);
   const temporalRange = formatTemporalSegmentToSantiago(
@@ -187,6 +225,14 @@ function onFeatureClick(
 
   popup.value.setDOMContent(popupContent);
   popup.value.setLngLat(e.lngLat).addTo(map.value);
+
+  // Fix accessibility: remove aria-hidden from close button to prevent focus trap warning
+  const closeButton = popup.value
+    .getElement()
+    ?.querySelector(".mapboxgl-popup-close-button");
+  if (closeButton) {
+    closeButton.removeAttribute("aria-hidden");
+  }
 
   const source = map.value.getSource(selectedGeoJsonSourceId) as
     | mapboxgl.GeoJSONSource
@@ -312,6 +358,15 @@ function createPopup(alertData: AlertData, marker: mapboxgl.Marker) {
   alertPopup.setLngLat(coords);
   hideMarker(marker);
   if (map.value) alertPopup.addTo(map.value);
+
+  // Fix accessibility: remove aria-hidden from close button to prevent focus trap warning
+  const closeButton = alertPopup
+    .getElement()
+    ?.querySelector(".mapboxgl-popup-close-button");
+  if (closeButton) {
+    closeButton.removeAttribute("aria-hidden");
+  }
+
   alertPopup.once("close", () => {
     cleanup();
     showMarker(marker);
@@ -435,10 +490,114 @@ async function loadCameras() {
   }
 }
 
+// Traffic signal marker functions
+function createTrafficSignalMarkerElement(): HTMLDivElement {
+  const el = document.createElement("div");
+  const zoom = map.value?.getZoom() ?? 14;
+  const size = getTrafficSignalIconSize(zoom);
+  el.innerHTML = getTrafficSignalSvgIcon(size);
+  el.style.cursor = "pointer";
+  el.style.display = "flex";
+  el.style.alignItems = "center";
+  el.style.justifyContent = "center";
+  el.classList.add("traffic-signal-marker");
+  return el;
+}
+
+// Update all traffic signal marker sizes based on current zoom
+function updateTrafficSignalMarkerSizes() {
+  if (!map.value) return;
+  const zoom = map.value.getZoom();
+  const size = getTrafficSignalIconSize(zoom);
+  trafficSignalMarkerList.value.forEach((marker) => {
+    const el = marker.getElement();
+    const svg = el.querySelector("svg");
+    if (svg) {
+      svg.setAttribute("width", String(size));
+      svg.setAttribute("height", String(size));
+    }
+  });
+}
+
+function createTrafficSignalMarker(signalData: TrafficSignalData) {
+  const coords: [number, number] = [signalData.longitude, signalData.latitude];
+  const el = createTrafficSignalMarkerElement();
+
+  const marker = new mapboxgl.Marker({ element: el }).setLngLat(coords);
+
+  const signalPopup = new mapboxgl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    className: "traffic-signal-popup",
+    offset: 25,
+  });
+
+  el.addEventListener("mouseenter", () => {
+    if (!map.value) return;
+    const popupContent = document.createElement("div");
+    const cleanup = renderWithCleanup(
+      getTrafficSignalPopupContent(
+        signalData.osm_id,
+        signalData.intersecting_ways
+      ),
+      popupContent
+    );
+    signalPopup.once("close", cleanup);
+    signalPopup.setDOMContent(popupContent);
+    signalPopup.setLngLat(coords).addTo(map.value);
+  });
+
+  el.addEventListener("mouseleave", () => {
+    signalPopup.remove();
+  });
+
+  trafficSignalMarkerList.value.push(marker);
+}
+
+function showTrafficSignalMarkers() {
+  if (!map.value) return;
+  trafficSignalMarkerList.value.forEach((marker) => {
+    marker.addTo(map.value!);
+  });
+}
+
+function clearTrafficSignalMarkers() {
+  // Call marker.remove() to properly unregister from the Mapbox map instance.
+  trafficSignalMarkerList.value.forEach((marker) => {
+    marker.remove();
+  });
+  trafficSignalMarkerList.value = [];
+}
+
+async function loadTrafficSignals() {
+  try {
+    const response = await MapAPI.getTrafficSignals();
+    const geojson = response.data;
+    clearTrafficSignalMarkers();
+
+    if (geojson && geojson.features) {
+      geojson.features.forEach((feature: any) => {
+        const signalData: TrafficSignalData = {
+          id: feature.properties.id,
+          osm_id: feature.properties.osm_id,
+          intersecting_ways: feature.properties.intersecting_ways,
+          longitude: feature.geometry.coordinates[0],
+          latitude: feature.geometry.coordinates[1],
+        };
+        createTrafficSignalMarker(signalData);
+      });
+    }
+    showTrafficSignalMarkers();
+  } catch (error) {
+    console.error("Error loading traffic signals:", error);
+  }
+}
+
 onMounted(() => {
   initializeMap();
   updateMap();
   loadCameras();
+  loadTrafficSignals();
   // Store the cron job reference so it can be stopped when the component unmounts.
   cronJob = Cron("59 0/15 * * * *", () => {
     updateMap();

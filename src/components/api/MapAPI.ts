@@ -7,6 +7,9 @@ class MapAPI {
   public static async getCameras() {
     return APIService.get("geo/camera");
   }
+  public static async getTrafficSignals() {
+    return APIService.get("geo/traffic_signal/geojson");
+  }
   public static get_all_gps() {
     return APIService.get("gps/create");
   }

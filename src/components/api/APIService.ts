@@ -1,8 +1,6 @@
 import type { App } from "vue";
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
-import axios from "axios";
 import JWTService from "@/components/api/JWTService";
-import VueAxios from "vue-axios";
 
 /**
  * @description service to call HTTP request via Axios
@@ -18,15 +16,17 @@ class APIService {
    */
   public static init(app: App<Element>) {
     APIService.vueInstance = app;
-    APIService.vueInstance.use(VueAxios, axios);
-    APIService.vueInstance.axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
+    APIService.vueInstance.axios.defaults.baseURL =
+      import.meta.env.VITE_BASE_URL;
   }
 
   /**
    * @description set the default HTTP request headers
    */
   public static setHeader(): void {
-    APIService.vueInstance.axios.defaults.headers.common["Authorization"] = `Token ${JWTService.getToken()}`;
+    APIService.vueInstance.axios.defaults.headers.common[
+      "Authorization"
+    ] = `Token ${JWTService.getToken()}`;
   }
 
   /**
@@ -35,7 +35,10 @@ class APIService {
    * @param params: AxiosRequestConfig
    * @returns Promise<AxiosResponse>
    */
-  public static query(resource: string, params: AxiosRequestConfig): Promise<AxiosResponse> {
+  public static query(
+    resource: string,
+    params: AxiosRequestConfig
+  ): Promise<AxiosResponse> {
     return APIService.vueInstance.axios.get(resource, params);
   }
 
@@ -45,7 +48,10 @@ class APIService {
    * @param slug: string
    * @returns Promise<AxiosResponse>
    */
-  public static get(resource: string, slug = "" as string): Promise<AxiosResponse> {
+  public static get(
+    resource: string,
+    slug = "" as string
+  ): Promise<AxiosResponse> {
     return APIService.vueInstance.axios.get(`${resource}/${slug}`);
   }
 
@@ -55,8 +61,15 @@ class APIService {
    * @param params: AxiosRequestConfig
    * @returns Promise<AxiosResponse>
    */
-  public static post(resource: string, params: AxiosRequestConfig): Promise<AxiosResponse> {
-    return APIService.vueInstance.axios.post(`${resource}`, params.data, params);
+  public static post(
+    resource: string,
+    params: AxiosRequestConfig
+  ): Promise<AxiosResponse> {
+    return APIService.vueInstance.axios.post(
+      `${resource}`,
+      params.data,
+      params
+    );
   }
 
   /**
@@ -65,8 +78,15 @@ class APIService {
    * @param params: AxiosRequestConfig
    * @returns Promise<AxiosResponse>
    */
-  public static postWithFiles(resource: string, params: AxiosRequestConfig): Promise<AxiosResponse> {
-    return APIService.vueInstance.axios.post(`${resource}`, params.params, params);
+  public static postWithFiles(
+    resource: string,
+    params: AxiosRequestConfig
+  ): Promise<AxiosResponse> {
+    return APIService.vueInstance.axios.post(
+      `${resource}`,
+      params.params,
+      params
+    );
   }
 
   /**
@@ -76,7 +96,11 @@ class APIService {
    * @param params: AxiosRequestConfig
    * @returns Promise<AxiosResponse>
    */
-  public static update(resource: string, slug: string, params: AxiosRequestConfig): Promise<AxiosResponse> {
+  public static update(
+    resource: string,
+    slug: string,
+    params: AxiosRequestConfig
+  ): Promise<AxiosResponse> {
     return APIService.vueInstance.axios.put(`${resource}/${slug}`, params);
   }
 
@@ -86,7 +110,10 @@ class APIService {
    * @param params: AxiosRequestConfig
    * @returns Promise<AxiosResponse>
    */
-  public static put(resource: string, params: AxiosRequestConfig): Promise<AxiosResponse> {
+  public static put(
+    resource: string,
+    params: AxiosRequestConfig
+  ): Promise<AxiosResponse> {
     return APIService.vueInstance.axios.put(`${resource}`, params);
   }
 
@@ -96,7 +123,10 @@ class APIService {
    * @param params: AxiosRequestConfig
    * @returns Promise<AxiosResponse>
    */
-  public static patch(resource: string, params: AxiosRequestConfig): Promise<AxiosResponse> {
+  public static patch(
+    resource: string,
+    params: AxiosRequestConfig
+  ): Promise<AxiosResponse> {
     return APIService.vueInstance.axios.patch(`${resource}`, params);
   }
 
