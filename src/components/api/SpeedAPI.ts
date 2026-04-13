@@ -16,7 +16,7 @@ class SpeedAPI {
     dayType: string | boolean,
     temporalSegment: number,
     page: number,
-    endpoint: string
+    endpoint: string,
   ) {
     let slug = `?month=${month}&page=${page}`;
     if (dayType !== false) slug += `&dayType=${dayType}`;
@@ -31,7 +31,7 @@ class SpeedAPI {
     temporalSegment: number,
     page: number,
     endpoint: string,
-    ordering?: string
+    ordering?: string,
   ) {
     let slug = `?startTime=${startTime}&endTime=${endTime}&page=${page}`;
     if (dayType !== false) slug += `&dayType=${dayType}`;
@@ -46,7 +46,7 @@ class SpeedAPI {
     dayType: string | boolean,
     temporalSegment: number,
     page: number,
-    ordering?: string
+    ordering?: string,
   ) {
     const parsedStartTime = parseDateObject(startTime);
     const parsedEndTime = parseDateObject(endTime);
@@ -57,7 +57,7 @@ class SpeedAPI {
       temporalSegment,
       page,
       "geo/speeds",
-      ordering
+      ordering,
     );
   }
 
@@ -65,14 +65,14 @@ class SpeedAPI {
     month: number,
     dayType: string | boolean,
     temporalSegment: number,
-    page: number
+    page: number,
   ) {
     return this.getListByMonth(
       month,
       dayType,
       temporalSegment,
       page,
-      "geo/historicSpeeds"
+      "geo/historicSpeeds",
     );
   }
 
@@ -102,7 +102,7 @@ class SpeedAPI {
   public static downloadHistoricSpeeds(
     month: number,
     dayType: string | boolean,
-    temporalSegment: number
+    temporalSegment: number,
   ) {
     const args: DownloadArgs = {
       month: month,
@@ -113,10 +113,10 @@ class SpeedAPI {
     return this.downloadCSV(args);
   }
 
-  public static downloadHistoricSpeedsLocal(
+  public static downloadHistoricSpeedsLocalAuto(
     month: number,
     dayType: string | boolean,
-    temporalSegment: number
+    temporalSegment: number,
   ) {
     const args: DownloadArgs = {
       month: month,
@@ -131,7 +131,7 @@ class SpeedAPI {
     startTime: Date,
     endTime: Date,
     dayType: string | boolean,
-    temporalSegment: number
+    temporalSegment: number,
   ) {
     const parsedStartTime = parseDateObject(startTime);
     const parsedEndTime = parseDateObject(endTime);
@@ -145,11 +145,11 @@ class SpeedAPI {
     return this.downloadCSV(args);
   }
 
-  public static downloadSpeedsLocal(
+  public static downloadSpeedsLocalAuto(
     startTime: Date,
     endTime: Date,
     dayType: string | boolean,
-    temporalSegment: number
+    temporalSegment: number,
   ) {
     const parsedStartTime = parseDateObject(startTime);
     const parsedEndTime = parseDateObject(endTime);

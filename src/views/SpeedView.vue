@@ -41,10 +41,10 @@ temporalSegmentOptions.unshift({ label: "Todos", value: -1 });
 const selectedTemporalSegment = ref(-1);
 
 const timeFormatOptions = [
-  { value: "local", label: "Hora Local (Santiago)" },
+  { value: "auto", label: "Hora Local (Chile)" },
   { value: "utc", label: "UTC" },
 ];
-const selectedTimeFormat = ref("local");
+const selectedTimeFormat = ref("auto");
 
 const lastDayType = ref();
 const loading = ref(false);
@@ -65,16 +65,16 @@ function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
 
   isDownloading.value = true;
 
-  // Usar el endpoint del backend según el formato seleccionado
-  const downloadPromise =
-    selectedTimeFormat.value === "local"
-      ? SpeedAPI.downloadSpeedsLocal(
-          startTime,
-          endTime,
-          dayType,
-          temporalSegment
-        )
-      : SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment);
+  let downloadPromise;
+  let formatSuffix;
+
+  if (selectedTimeFormat.value === "auto") {
+    downloadPromise = SpeedAPI.downloadSpeedsLocalAuto(startTime, endTime, dayType, temporalSegment);
+    formatSuffix = "_local";
+  } else {
+    downloadPromise = SpeedAPI.downloadSpeeds(startTime, endTime, dayType, temporalSegment);
+    formatSuffix = "_utc";
+  }
 
   downloadPromise
     .then((response) => {
@@ -82,8 +82,6 @@ function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
       const url = window.URL.createObjectURL(new Blob([csvData]));
       const link = document.createElement("a");
       link.href = url;
-      const formatSuffix =
-        selectedTimeFormat.value === "local" ? "_local" : "_utc";
       link.setAttribute("download", `speed_${monthString}${formatSuffix}.csv`);
       document.body.appendChild(link);
       link.click();
@@ -242,27 +240,15 @@ onMounted(() => {
               />
             </el-select>
           </div>
-          <div class="option-container">
-            <span>Formato de descarga</span>
-            <el-select
-              v-model="selectedTimeFormat"
-              placeholder="Select"
-              style="width: 240px"
-            >
-              <el-option
-                v-for="item in timeFormatOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </div>
         </div>
 
         <el-button
           @click="updateSpeedData(dayTypeValue, selectedTemporalSegment, false)"
           >Aplicar filtros</el-button
         >
+      </div>
+      <div class="table-data-info">
+        <span>Los datos mostrados en la tabla estan en zona horaria America/Santiago (con cambio de horario automatico)</span>
       </div>
       <el-table
         v-loading="loading"
@@ -325,13 +311,20 @@ onMounted(() => {
       </div>
     </div>
     <div class="download-container">
-      <div class="download-info">
-        <span
-          >Formato:
-          {{
-            selectedTimeFormat === "local" ? "Hora Local (Santiago)" : "UTC"
-          }}</span
+      <div class="option-container download-option">
+        <span>Formato de descarga</span>
+        <el-select
+          v-model="selectedTimeFormat"
+          placeholder="Select"
+          style="width: 200px"
         >
+          <el-option
+            v-for="item in timeFormatOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
       </div>
       <div
         class="download-button"
@@ -381,9 +374,16 @@ onMounted(() => {
   padding: 8px 8px;
 }
 
-.download-info {
+.download-option {
   color: white;
-  font-size: 14px;
+}
+
+.table-data-info {
+  color: #aaa;
+  font-size: 12px;
+  width: 60vw;
+  text-align: left;
+  padding: 4px 0;
 }
 
 .download-label {

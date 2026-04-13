@@ -34,10 +34,10 @@ temporalSegmentOptions.unshift({ label: "Todos", value: -1 });
 const selectedTemporalSegment = ref(-1);
 
 const timeFormatOptions = [
-  { value: "local", label: "Hora Local (Santiago)" },
+  { value: "auto", label: "Hora Local (Chile)" },
   { value: "utc", label: "UTC" },
 ];
-const selectedTimeFormat = ref("local");
+const selectedTimeFormat = ref("auto");
 
 const lastMonth = ref();
 const lastDayType = ref();
@@ -58,11 +58,16 @@ function downloadHistoricSpeeds(
 ) {
   isDownloading.value = true;
 
-  // Usar el endpoint del backend según el formato seleccionado
-  const downloadPromise =
-    selectedTimeFormat.value === "local"
-      ? SpeedAPI.downloadHistoricSpeedsLocal(month, dayType, temporalSegment)
-      : SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment);
+  let downloadPromise;
+  let formatSuffix;
+
+  if (selectedTimeFormat.value === "auto") {
+    downloadPromise = SpeedAPI.downloadHistoricSpeedsLocalAuto(month, dayType, temporalSegment);
+    formatSuffix = "_local";
+  } else {
+    downloadPromise = SpeedAPI.downloadHistoricSpeeds(month, dayType, temporalSegment);
+    formatSuffix = "_utc";
+  }
 
   downloadPromise
     .then((response) => {
@@ -70,12 +75,7 @@ function downloadHistoricSpeeds(
       const url = window.URL.createObjectURL(new Blob([csvData]));
       const link = document.createElement("a");
       link.href = url;
-      const formatSuffix =
-        selectedTimeFormat.value === "local" ? "_local" : "_utc";
-      link.setAttribute(
-        "download",
-        `historic_speed_${month_string}${formatSuffix}.csv`
-      );
+      link.setAttribute("download", `historic_speed_${month_string}${formatSuffix}.csv`);
       document.body.appendChild(link);
       link.click();
       if (link.parentNode) link.parentNode.removeChild(link);
@@ -222,6 +222,9 @@ function pageDown() {
           >Aplicar filtros
         </el-button>
       </div>
+      <div class="table-data-info">
+        <span>Los datos mostrados en la tabla estan en zona horaria America/Santiago (con cambio de horario automatico)</span>
+      </div>
       <el-table
         v-loading="loading"
         class="historic-speed-table"
@@ -268,8 +271,8 @@ function pageDown() {
       </div>
     </div>
     <div class="download-container">
-      <div class="option-container">
-        <span>Formato de hora</span>
+      <div class="option-container download-option">
+        <span>Formato de descarga</span>
         <el-select
           v-model="selectedTimeFormat"
           placeholder="Select"
@@ -333,6 +336,18 @@ function pageDown() {
   flex-direction: row;
   gap: 16px;
   padding: 8px 8px;
+}
+
+.download-option {
+  color: white;
+}
+
+.table-data-info {
+  color: #aaa;
+  font-size: 12px;
+  width: 60vw;
+  text-align: left;
+  padding: 4px 0;
 }
 
 .download-label {
