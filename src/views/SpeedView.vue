@@ -5,6 +5,7 @@ import {
   formatUTCToZone,
   parseTemporalSegment,
   temporalSegmentFromTimestamp,
+  temporalSegmentToUTCIndex,
   temporalSegmentRange,
 } from "@/utils/date_utils";
 import { onMounted, ref } from "vue";
@@ -62,6 +63,8 @@ const sortOrder = ref<"ascending" | "descending" | null>(null);
 function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
   const startTime = new Date(dateTimeValue.value[0]);
   const endTime = new Date(dateTimeValue.value[1]);
+  // The selector lists local intervals; the backend filters by UTC index.
+  temporalSegment = temporalSegmentToUTCIndex(temporalSegment, startTime);
 
   isDownloading.value = true;
 
@@ -105,6 +108,7 @@ function updateSpeedData(
   const startTime = new Date(dateTimeValue.value[0]);
   const endTime = new Date(dateTimeValue.value[1]);
   const page = currentPage.value;
+  temporalSegment = temporalSegmentToUTCIndex(temporalSegment, startTime);
 
   // Build ordering parameter for server-side sorting
   let ordering: string | undefined;

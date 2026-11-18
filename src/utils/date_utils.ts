@@ -49,15 +49,8 @@ export function parseTemporalSegment(idx: number) {
 }
 
 export function parseDateObject(date: Date) {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-
-  const hours = date.getHours().toString().padStart(2, "0");
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  const seconds = date.getSeconds().toString().padStart(2, "0");
-
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+  // The instant in UTC, "YYYY-MM-DDTHH:MM:SSZ" (what the backend expects).
+  return date.toISOString().slice(0, 19) + "Z";
 }
 
 /**
@@ -164,21 +157,11 @@ export function temporalSegmentFromTimestamp(
 }
 
 /**
- * Convert a temporal segment index computed for UTC into the equivalent
- * temporal segment index in the given timeZone, using a reference date to
- * resolve DST (e.g., use the month/day being queried).
- *
- * referenceDate: Date object indicating which date's UTC->local offset to use
+ * Offset in segments between America/Santiago (or `timeZone`) and UTC on
+ * `referenceDate`, which resolves DST (e.g. the date or month being queried).
  */
-export function temporalSegmentFromUTCIndex(
-  utcIndex: number,
-  referenceDate: Date,
-  timeZone = "America/Santiago",
-  range = TEMPORAL_RANGE,
-) {
-  const total = Math.floor(1440 / range);
-
-  // Compute offset in minutes between UTC midnight and local time at that UTC midnight
+function localOffsetSegments(referenceDate: Date, timeZone: string, range: number) {
+  // Offset in minutes between UTC midnight and local time at that UTC midnight
   const utcMidMs = Date.UTC(
     referenceDate.getFullYear(),
     referenceDate.getMonth(),
@@ -212,9 +195,30 @@ export function temporalSegmentFromUTCIndex(
   if (localDay < utcDay) offsetMinutes -= 1440;
   if (localDay > utcDay) offsetMinutes += 1440;
 
-  const offsetSegments = Math.round(offsetMinutes / range);
+  return Math.round(offsetMinutes / range);
+}
 
-  let localIndex = (utcIndex + offsetSegments) % total;
-  if (localIndex < 0) localIndex += total;
-  return localIndex;
+/** Convert a UTC temporal segment index into the local one (see localOffsetSegments). */
+export function temporalSegmentFromUTCIndex(
+  utcIndex: number,
+  referenceDate: Date,
+  timeZone = "America/Santiago",
+  range = TEMPORAL_RANGE,
+) {
+  const total = Math.floor(1440 / range);
+  const offset = localOffsetSegments(referenceDate, timeZone, range);
+  return (((utcIndex + offset) % total) + total) % total;
+}
+
+/** Inverse of temporalSegmentFromUTCIndex; -1 ("all") is kept as is. */
+export function temporalSegmentToUTCIndex(
+  localIndex: number,
+  referenceDate: Date,
+  timeZone = "America/Santiago",
+  range = TEMPORAL_RANGE,
+) {
+  if (localIndex < 0) return localIndex;
+  const total = Math.floor(1440 / range);
+  const offset = localOffsetSegments(referenceDate, timeZone, range);
+  return (((localIndex - offset) % total) + total) % total;
 }
