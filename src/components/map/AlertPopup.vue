@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { temporalSegmentFromUTCIndex } from "@/utils/date_utils";
+import { TEMPORAL_RANGE, temporalSegmentFromUTCIndex } from "@/utils/date_utils";
 import { computed } from "vue";
 
 const props = defineProps({
@@ -8,7 +8,6 @@ const props = defineProps({
   useless: Number,
 });
 
-const TEMPORAL_RANGE = 15;
 const DAY_ORDER = ["L", "S", "D"];
 
 const displayKeyValue = computed(() => {

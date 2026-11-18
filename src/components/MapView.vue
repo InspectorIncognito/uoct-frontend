@@ -53,7 +53,7 @@ const markerList = shallowRef<mapboxgl.Marker[]>([]);
 const cameraMarkerList = shallowRef<mapboxgl.Marker[]>([]);
 
 // Cron job reference — stored so we can stop it in onUnmounted.
-let cronJob: ReturnType<typeof Cron> | null = null;
+let cronJobs: ReturnType<typeof Cron>[] = [];
 
 const geoJsonSourceId = "geojson-source";
 const geoJsonLayerId = "geojson-layer";
@@ -214,36 +214,32 @@ async function updateGeoJson() {
 
   if (!map.value) return;
 
-  if (map.value.getSource(geoJsonSourceId)) {
-    // Remove existing event listeners BEFORE removing the layer/source
-    // to prevent accumulation of duplicate listeners on every refresh.
-    map.value.off("click", geoJsonLayerId, onFeatureClick);
-    map.value.off("mouseenter", geoJsonLayerId, onMouseEnterFeature);
-    map.value.off("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
-    map.value.removeLayer(geoJsonLayerId);
-    map.value.removeSource(geoJsonSourceId);
-  }
+  const source = map.value.getSource(geoJsonSourceId) as
+    | mapboxgl.GeoJSONSource
+    | undefined;
+  if (source) {
+    // Refresh: update the data in place instead of rebuilding source, layer and listeners.
+    source.setData(geojsonData);
+  } else {
+    map.value.addSource(geoJsonSourceId, {
+      type: "geojson",
+      data: geojsonData,
+    });
 
-  map.value.addSource(geoJsonSourceId, {
-    type: "geojson",
-    data: geojsonData,
-  });
+    map.value.addLayer({
+      id: geoJsonLayerId,
+      type: "line",
+      source: geoJsonSourceId,
+      paint: {
+        "line-color": ["coalesce", ["get", "color"], "#DDDDDD"],
+        "line-width": 4,
+      },
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+    });
 
-  map.value.addLayer({
-    id: geoJsonLayerId,
-    type: "line",
-    source: geoJsonSourceId,
-    paint: {
-      "line-color": ["coalesce", ["get", "color"], "#DDDDDD"],
-      "line-width": 4,
-    },
-    layout: {
-      "line-join": "round",
-      "line-cap": "round",
-    },
-  });
-
-  if (!map.value.getSource(selectedGeoJsonSourceId)) {
     map.value.addSource(selectedGeoJsonSourceId, {
       type: "geojson",
       data: {
@@ -251,12 +247,11 @@ async function updateGeoJson() {
         features: [],
       },
     });
-  }
 
-  // Register event listeners exactly once after (re)adding the layer.
-  map.value.on("click", geoJsonLayerId, onFeatureClick);
-  map.value.on("mouseenter", geoJsonLayerId, onMouseEnterFeature);
-  map.value.on("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
+    map.value.on("click", geoJsonLayerId, onFeatureClick);
+    map.value.on("mouseenter", geoJsonLayerId, onMouseEnterFeature);
+    map.value.on("mouseleave", geoJsonLayerId, onMouseLeaveFeature);
+  }
 
   alertData.forEach((data: AlertData) => {
     createMarker(data);
@@ -440,16 +435,17 @@ onMounted(() => {
   updateMap();
   loadCameras();
   // Store the cron job reference so it can be stopped when the component unmounts.
-  cronJob = Cron("59 0/15 * * * *", () => {
-    updateMap();
-  });
+  // Speeds are recomputed every 7.5 min (at :00:30, :08:00, :15:30, ...).
+  cronJobs = ["59 0/15 * * * *", "59 8/15 * * * *"].map((pattern) =>
+    Cron(pattern, updateMap),
+  );
 });
 
 onUnmounted(() => {
   // Stop the background polling to prevent runaway cron jobs if the component
   // is ever unmounted and remounted (e.g. during route navigation).
-  cronJob?.stop();
-  cronJob = null;
+  cronJobs.forEach((job) => job.stop());
+  cronJobs = [];
   // Remove the map instance to free GPU/memory resources.
   map.value?.remove();
   map.value = null;

@@ -77,7 +77,6 @@ const handleSubmit = async () => {
     try {
       await AxlesAPI.processAxis({
         axis_name: axisName,
-        distance_threshold: 500.0,
       });
       exitoMsg.value = `Eje "${axisName}" creado y procesado correctamente.`;
       console.log("Eje procesado exitosamente:", axisName);

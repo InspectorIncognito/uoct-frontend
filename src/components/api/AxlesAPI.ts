@@ -52,7 +52,7 @@ class AxlesAPI {
   /**
    * Triggers the Django management command 'add_single_axis' to process
    * the axis geometry from OpenStreetMap data.
-   * @param payload - axis_name (required), distance_threshold (optional, default 500.0)
+   * @param payload - axis_name (required), distance_threshold (optional, backend default)
    */
   public static processAxis(payload: ProcessAxisPayload) {
     APIService.setHeader();

@@ -1,5 +1,6 @@
-const TEMPORAL_RANGE = 15;
-export const temporalSegmentRange = Math.floor(1440 / 15);
+// Length of a temporal segment in minutes. Must match the backend's TEMPORAL_SEGMENT_MINUTES.
+export const TEMPORAL_RANGE = 7.5;
+export const temporalSegmentRange = Math.floor(1440 / TEMPORAL_RANGE);
 export const monthOptions = [
   { value: 1, label: "Enero" },
   { value: 2, label: "Febrero" },
@@ -35,25 +36,16 @@ export function parseTemporalSegment(idx: number) {
   const startTime = idx * TEMPORAL_RANGE;
   const endTime = startTime + TEMPORAL_RANGE;
 
-  const startHours = Math.floor(startTime / 60);
-  const endHours = Math.floor(endTime / 60);
-  const startMinutes = startTime % 60;
-  const endMinutes = endTime % 60;
-
-  const formatTime = (hours: number, minutes: number) => {
-    if (hours === 24) {
-      return "23:59";
-    }
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-      2,
-      "0",
-    )}`;
+  // "HH:MM", or "HH:MM:SS" when the instant is not on a whole minute.
+  const formatTime = (minutes: number) => {
+    if (minutes >= 1440) return "23:59";
+    const total = Math.round(minutes * 60);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const hms = [Math.floor(total / 3600), Math.floor((total % 3600) / 60), total % 60];
+    return (hms[2] ? hms : hms.slice(0, 2)).map(pad).join(":");
   };
 
-  const start = formatTime(startHours, startMinutes);
-  const end = formatTime(endHours, endMinutes);
-
-  return `${start} - ${end} (${idx})`;
+  return `${formatTime(startTime)} - ${formatTime(endTime)} (${idx})`;
 }
 
 export function parseDateObject(date: Date) {
@@ -152,6 +144,7 @@ export function temporalSegmentFromTimestamp(
     timeZone,
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     day: "2-digit",
     hour12: false,
   });
@@ -163,7 +156,8 @@ export function temporalSegmentFromTimestamp(
 
   const hour = Number(parts.hour || "0");
   const minute = Number(parts.minute || "0");
-  const minutesSinceMid = hour * 60 + minute;
+  const second = Number(parts.second || "0");
+  const minutesSinceMid = hour * 60 + minute + second / 60;
   const idx = Math.floor(minutesSinceMid / range);
   const total = Math.floor(1440 / range);
   return ((idx % total) + total) % total;
