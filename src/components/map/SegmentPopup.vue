@@ -97,7 +97,7 @@ function formatHighwayType(type: string): string {
           <div v-else class="intersection-info">
             <div class="intersection-badge fallback">
               <span class="material-icons">straighten</span>
-              <span>Corte a 500m (sin semáforo)</span>
+              <span>Corte a 200m (sin semáforo)</span>
             </div>
           </div>
         </div>

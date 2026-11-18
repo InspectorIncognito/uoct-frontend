@@ -5,6 +5,7 @@ import {
   monthOptions,
   parseTemporalSegment,
   temporalSegmentFromUTCIndex,
+  temporalSegmentToUTCIndex,
   temporalSegmentRange,
 } from "@/utils/date_utils";
 import { onMounted, ref } from "vue";
@@ -39,6 +40,9 @@ const timeFormatOptions = [
 ];
 const selectedTimeFormat = ref("auto");
 
+// Reference date of the queried month, used to resolve the UTC offset (DST).
+const monthStart = (month: number) => new Date(new Date().getFullYear(), month - 1, 1);
+
 const lastMonth = ref();
 const lastDayType = ref();
 
@@ -56,6 +60,8 @@ function downloadHistoricSpeeds(
   dayType: string | boolean,
   temporalSegment: number
 ) {
+  // The selector lists local intervals; the backend filters by UTC index.
+  temporalSegment = temporalSegmentToUTCIndex(temporalSegment, monthStart(month));
   isDownloading.value = true;
 
   let downloadPromise;
@@ -101,6 +107,7 @@ function updateHistoricSpeedData(
     currentPage.value = 1;
   }
   const page = currentPage.value;
+  temporalSegment = temporalSegmentToUTCIndex(temporalSegment, monthStart(month));
   SpeedAPI.getHistoricSpeeds(month, dayType, temporalSegment, page)
     .then((response) => {
       const data = response.data;
@@ -112,10 +119,9 @@ function updateHistoricSpeedData(
         // For historic data the response.temporal_segment is likely computed in UTC.
         // Map it to local segment using the queried month as reference for DST.
         try {
-          const refDate = new Date(new Date().getFullYear(), month - 1, 1);
           const localIdx = temporalSegmentFromUTCIndex(
             obj.temporal_segment,
-            refDate
+            monthStart(month)
           );
           obj.temporal_segment = parseTemporalSegment(localIdx);
         } catch (e) {
