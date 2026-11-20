@@ -1,20 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <script>
+      // Apply the stored theme before first paint to avoid a flash.
+      try {
+        var stored = localStorage.getItem("uoct-theme");
+        if (stored === "light" || stored === "dark") {
+          document.documentElement.setAttribute("data-theme", stored);
+        }
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/icon?family=Material+Icons"
-      rel="stylesheet"
-    />
+    <!-- Icons stay on the Google CDN: it serves an axis-limited subset, while the
+         self-hosted variable font is ~3.5 MB. -->
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css?family=Inter&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@20..24,300..400,0..1,0&display=block"
     />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>UOCT Map</title>
+    <title>UOCT · Velocidades</title>
   </head>
   <body>
     <div id="app"></div>

@@ -4,16 +4,23 @@ import { createRouter, createWebHistory } from "vue-router";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior: (to, from, saved) => saved ?? { top: 0 },
   routes: [
     {
       path: "/",
       name: "home",
       component: MainView,
+      redirect: { name: "map" },
       children: [
         {
           path: "map",
           name: "map",
           component: () => import("../components/MapView.vue"),
+        },
+        {
+          path: "/dashboard",
+          name: "dashboard",
+          component: () => import("../views/DashboardView.vue"),
         },
         {
           path: "/speeds",
@@ -76,10 +83,6 @@ router.beforeEach(async (to, from, next) => {
 
   if (authStore.isAuthenticated || to.name === "login") {
     next();
-    // Scroll page to top on every route change
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 100);
   } else {
     console.log("user is not authenticated");
     next({ name: "login" });

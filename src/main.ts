@@ -3,11 +3,11 @@ import { createPinia } from "pinia";
 import ElementPlus from "element-plus";
 import App from "./App.vue";
 import router from "./router";
-import axios from "axios";
-import VueAxios from "vue-axios";
 
-import "./assets/base.css";
+// Element Plus first so our tokens (base.css) win over its :root defaults.
 import "element-plus/dist/index.css";
+import "@fontsource-variable/martian-mono/wdth";
+import "./assets/base.css";
 import es from "element-plus/es/locale/lang/es";
 import APIService from "@/components/api/APIService";
 import { createI18n } from "vue-i18n";
@@ -28,7 +28,6 @@ app.use(ElementPlus, {
 });
 app.use(createPinia());
 app.use(router);
-app.use(VueAxios, axios);
 app.use(i18n);
 
 APIService.init(app);

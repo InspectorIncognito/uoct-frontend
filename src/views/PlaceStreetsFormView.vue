@@ -46,12 +46,14 @@ const exitoMsg = ref("");
 const handleSubmit = async () => {
   const callesValidas = formData.value.calles.filter((c) => c.trim() !== "");
 
+  errorMsg.value = "";
+  exitoMsg.value = "";
   if (!formData.value.nombre.trim()) {
-    alert("Ingrese el nombre del eje");
+    errorMsg.value = "Falta el nombre del eje.";
     return;
   }
   if (callesValidas.length === 0) {
-    alert("Ingrese al menos una calle");
+    errorMsg.value = "Agrega al menos una calle.";
     return;
   }
 
@@ -67,9 +69,7 @@ const handleSubmit = async () => {
   try {
     const { data } = await AxlesAPI.create(submitData);
     const axisName = submitData.name;
-    exitoMsg.value = `Eje creado con ID ${
-      data?.id || ""
-    }. Procesando geometría...`.trim();
+    exitoMsg.value = `Eje creado con ID ${data?.id || ""}. Procesando geometría...`.trim();
     console.log("Eje creado:", data);
 
     // Procesar el eje: ejecuta el comando de Django add_single_axis
@@ -86,18 +86,14 @@ const handleSubmit = async () => {
     } catch (processErr: any) {
       console.error("Error al procesar el eje:", processErr);
       errorMsg.value = processErr?.response?.data
-        ? `Eje creado pero error al procesar: ${JSON.stringify(
-            processErr.response.data
-          )}`
+        ? `Eje creado pero error al procesar: ${JSON.stringify(processErr.response.data)}`
         : `Eje creado pero error al procesar la geometría`;
     } finally {
       procesando.value = false;
     }
   } catch (err: any) {
     console.error(err);
-    errorMsg.value = err?.response?.data
-      ? JSON.stringify(err.response.data)
-      : "Error al crear el eje";
+    errorMsg.value = err?.response?.data ? JSON.stringify(err.response.data) : "Error al crear el eje";
   } finally {
     cargando.value = false;
   }
@@ -153,9 +149,7 @@ const fetchAxles = async () => {
     }
 
     // Filter out any invalid entries that don't have an id
-    const validAxles = allAxles.filter(
-      (a: Axle) => a && a.id !== null && a.id !== undefined
-    );
+    const validAxles = allAxles.filter((a: Axle) => a && a.id !== null && a.id !== undefined);
     console.log("Total ejes cargados:", validAxles.length);
     axlesList.value = validAxles;
   } catch (err: any) {
@@ -173,7 +167,7 @@ const selectedAxle = computed(() => {
 
 const handleDelete = async () => {
   if (!selectedAxleId.value) {
-    alert("Seleccione un eje para eliminar");
+    deleteErrorMsg.value = "Selecciona un eje para eliminar.";
     return;
   }
 
@@ -199,9 +193,7 @@ const handleDelete = async () => {
     await fetchAxles();
   } catch (err: any) {
     console.error("Error al eliminar eje:", err);
-    deleteErrorMsg.value = err?.response?.data?.error
-      ? err.response.data.error
-      : "Error al eliminar el eje";
+    deleteErrorMsg.value = err?.response?.data?.error ? err.response.data.error : "Error al eliminar el eje";
   } finally {
     deletingAxle.value = false;
   }
@@ -214,638 +206,391 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="place-streets-form">
-    <div class="cards-container">
-      <!-- CREATE CARD -->
-      <div class="card create-card">
-        <h1 class="form-title">Nuevo Eje</h1>
+  <div class="page">
+    <header class="page-head">
+      <div>
+        <h1>Ejes viales</h1>
+        <p>
+          Crea un eje a partir de calles de OpenStreetMap para que empiece a medirse, o elimina uno existente junto con
+          todos sus datos.
+        </p>
+      </div>
+    </header>
 
-        <!-- Instrucciones -->
-        <div class="instructions">
-          <h2 class="instructions-title">Instrucciones</h2>
-          <ul class="instructions-list">
-            <li>
-              <strong>Nombre del eje:</strong> Nombre que se guardará en la base
-              de datos para identificar este eje vial.
-            </li>
-            <li>
-              <strong>Calles:</strong> Nombres de las calles que conforman el
-              eje. Deben coincidir exactamente con los nombres en
-              <a
-                href="https://www.openstreetmap.org/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="osm-link"
-                >OpenStreetMap</a
-              >. Las calles pueden tener separaciones de hasta 510 metros que
-              serán conectadas automáticamente.
-            </li>
-            <li>
-              <strong>Ciudad:</strong> Nombre de la relación que contiene el eje
-              vial (por defecto: "Provincia de Santiago").
-            </li>
-          </ul>
-        </div>
-
-        <form @submit.prevent="handleSubmit" class="form">
-          <!-- Nombre del Eje -->
-          <div class="form-group">
-            <label for="nombre" class="form-label">Nombre del eje</label>
+    <div class="axes-grid">
+      <!-- CREATE -->
+      <section class="tile ax-card" aria-labelledby="ax-new">
+        <h2 id="ax-new" class="caps ax-title">Nuevo eje</h2>
+        <div class="ax-cols">
+          <form class="ax-form" novalidate @submit.prevent="handleSubmit">
             <CustomInput
               type="text"
               name="nombre"
-              placeholder="Nombre del eje"
+              label="Nombre del eje"
+              placeholder="Ej: Eje Alameda"
               :value="formData.nombre"
               @input="updateNombre"
-              :hideLabel="true"
             />
-          </div>
 
-          <!-- Calles -->
-          <div class="form-group">
-            <label class="form-label">Calles</label>
-
-            <div class="streets-list">
-              <div
-                v-for="(street, index) in formData.calles"
-                :key="index"
-                class="street-item"
-              >
-                <CustomInput
-                  type="text"
-                  :name="`calle-${index}`"
-                  placeholder="Nombre de la calle"
-                  :value="street"
-                  @input="(value) => updateStreet(index, value)"
-                />
-                <button
-                  v-if="formData.calles.length > 1"
-                  type="button"
-                  class="remove-street-btn"
-                  @click="removeStreet(index)"
-                  title="Quitar calle"
-                >
-                  ✕
-                </button>
-              </div>
-              <button type="button" class="add-street-btn" @click="addStreet">
-                <span class="add-icon">+</span>
-                Agregar Calle
+            <fieldset class="streets">
+              <legend class="ax-label">Calles</legend>
+              <ol class="streets-list">
+                <li v-for="(street, index) in formData.calles" :key="index" class="street-row">
+                  <span class="street-idx num" aria-hidden="true">
+                    {{ String(index + 1).padStart(2, "0") }}
+                  </span>
+                  <CustomInput
+                    type="text"
+                    :name="`calle-${index}`"
+                    :label="`Calle ${index + 1}`"
+                    hide-label
+                    placeholder="Nombre exacto en OpenStreetMap"
+                    :value="street"
+                    @input="(value) => updateStreet(index, value)"
+                  />
+                  <button
+                    v-if="formData.calles.length > 1"
+                    type="button"
+                    class="btn btn--icon"
+                    :aria-label="`Quitar calle ${index + 1}`"
+                    title="Quitar calle"
+                    @click="removeStreet(index)"
+                  >
+                    <span class="material-icons" aria-hidden="true">close</span>
+                  </button>
+                </li>
+              </ol>
+              <button type="button" class="btn ax-add" @click="addStreet">
+                <span class="material-icons" aria-hidden="true">add</span>
+                Agregar calle
               </button>
-            </div>
-          </div>
+            </fieldset>
 
-          <!-- Ciudad -->
-          <div class="form-group">
-            <label for="ciudad" class="form-label">Ciudad</label>
             <CustomInput
               type="text"
               name="ciudad"
+              label="Ciudad"
               placeholder="Provincia de Santiago"
               :value="formData.ciudad"
               @input="updateCiudad"
-              :hideLabel="true"
             />
-          </div>
 
-          <div v-if="errorMsg || exitoMsg" class="status-messages">
-            <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
-            <p v-if="exitoMsg" class="success-msg">{{ exitoMsg }}</p>
-          </div>
+            <div v-if="errorMsg || exitoMsg" class="ax-status" role="status">
+              <p v-if="errorMsg" class="ax-msg ax-msg--error">{{ errorMsg }}</p>
+              <p v-if="exitoMsg" class="ax-msg ax-msg--ok">{{ exitoMsg }}</p>
+            </div>
 
-          <!-- Form Actions -->
-          <div class="form-actions">
-            <button
-              class="submit-button"
-              type="submit"
-              :disabled="cargando || procesando"
-            >
-              {{
-                procesando
-                  ? "Procesando geometría..."
-                  : cargando
-                  ? "Guardando..."
-                  : "Guardar"
-              }}
-            </button>
-          </div>
-        </form>
-      </div>
+            <div class="ax-actions">
+              <button class="btn btn--primary" type="submit" :disabled="cargando || procesando">
+                <span v-if="cargando || procesando" class="material-icons spin" aria-hidden="true"
+                  >progress_activity</span
+                >
+                {{ procesando ? "Procesando geometría" : cargando ? "Guardando" : "Crear y procesar eje" }}
+              </button>
+            </div>
+          </form>
 
-      <!-- DELETE CARD -->
-      <div class="card delete-card">
-        <h1 class="form-title">Eliminar Eje</h1>
-
-        <!-- Instrucciones -->
-        <div class="instructions">
-          <h2 class="instructions-title">Instrucciones</h2>
-          <ul class="instructions-list">
-            <li>
-              <strong>Seleccionar eje:</strong> Escoja el eje que desea eliminar
-              de la lista desplegable.
-            </li>
-            <li>
-              <strong>Datos asociados:</strong> Al eliminar un eje se borrarán
-              también todos los shapes, segmentos, velocidades, alertas y demás
-              datos relacionados.
-            </li>
-            <li>
-              <strong>Acción irreversible:</strong> Esta operación no se puede
-              deshacer. Asegúrese de seleccionar el eje correcto.
-            </li>
-          </ul>
+          <aside class="ax-help" aria-label="Instrucciones">
+            <dl>
+              <dt class="caps">Nombre del eje</dt>
+              <dd>Nombre con que se guardará en la base de datos para identificar este eje vial.</dd>
+              <dt class="caps">Calles</dt>
+              <dd>
+                Deben coincidir exactamente con los nombres en
+                <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>.
+                Los tramos separados por hasta 510 metros se conectan automáticamente.
+              </dd>
+              <dt class="caps">Ciudad</dt>
+              <dd>Relación que contiene el eje vial. Por defecto, “Provincia de Santiago”.</dd>
+            </dl>
+          </aside>
         </div>
+      </section>
 
-        <div class="form-group">
-          <label for="axle-select" class="form-label">Eje a eliminar</label>
-          <div class="select-wrapper">
-            <select
-              id="axle-select"
-              v-model="selectedAxleId"
-              class="axle-select"
-              :disabled="loadingAxles || deletingAxle"
-            >
-              <option :value="null" disabled>
-                {{ loadingAxles ? "Cargando ejes..." : "Seleccione un eje" }}
-              </option>
-              <option
-                v-for="(axle, index) in axlesList"
-                :key="axle.id ?? `axle-${index}`"
-                :value="axle.id"
-              >
-                {{ axle.name }}
-                {{
-                  axle.has_shapes
-                    ? `(${axle.shapes_count} shapes)`
-                    : "(sin procesar)"
-                }}
-              </option>
-            </select>
+      <!-- DELETE -->
+      <section class="tile ax-card" aria-labelledby="ax-del">
+        <h2 id="ax-del" class="caps ax-title">Eliminar eje</h2>
+
+        <div class="ax-field">
+          <label for="axle-select" class="ax-label">Eje a eliminar</label>
+          <div class="ax-select-row">
+            <div class="ax-select">
+              <select id="axle-select" v-model="selectedAxleId" :disabled="loadingAxles || deletingAxle">
+                <option :value="null" disabled>
+                  {{ loadingAxles ? "Cargando ejes…" : "Selecciona un eje" }}
+                </option>
+                <option v-for="(axle, index) in axlesList" :key="axle.id ?? `axle-${index}`" :value="axle.id">
+                  {{ axle.name }}
+                  {{ axle.has_shapes ? `(${axle.shapes_count} shapes)` : "(sin procesar)" }}
+                </option>
+              </select>
+              <span class="material-icons" aria-hidden="true">expand_more</span>
+            </div>
             <button
               type="button"
-              class="refresh-btn"
-              @click="fetchAxles"
+              class="btn btn--icon"
               :disabled="loadingAxles"
+              aria-label="Actualizar lista de ejes"
               title="Actualizar lista"
+              @click="fetchAxles"
             >
-              ↻
+              <span class="material-icons" :class="{ spin: loadingAxles }" aria-hidden="true"> refresh </span>
             </button>
           </div>
         </div>
 
-        <!-- Selected Axle Info -->
-        <div v-if="selectedAxle" class="axle-info">
-          <h4>Información del eje seleccionado:</h4>
-          <ul>
-            <li><strong>Nombre:</strong> {{ selectedAxle.name }}</li>
-            <li><strong>Ciudad:</strong> {{ selectedAxle.city }}</li>
-            <li>
-              <strong>Calles:</strong> {{ selectedAxle.streets.join(", ") }}
-            </li>
-            <li>
-              <strong>Estado:</strong>
-              <span
-                :class="
-                  selectedAxle.has_shapes
-                    ? 'status-processed'
-                    : 'status-pending'
-                "
-              >
-                {{
-                  selectedAxle.has_shapes
-                    ? `Procesado (${selectedAxle.shapes_count} shapes)`
-                    : "Sin procesar"
-                }}
-              </span>
-            </li>
-          </ul>
+        <dl v-if="selectedAxle" class="ax-info">
+          <div>
+            <dt class="caps">Nombre</dt>
+            <dd>{{ selectedAxle.name }}</dd>
+          </div>
+          <div>
+            <dt class="caps">Ciudad</dt>
+            <dd>{{ selectedAxle.city }}</dd>
+          </div>
+          <div class="ax-info-wide">
+            <dt class="caps">Calles</dt>
+            <dd>{{ selectedAxle.streets.join(", ") }}</dd>
+          </div>
+          <div>
+            <dt class="caps">Estado</dt>
+            <dd :class="selectedAxle.has_shapes ? 'is-ok' : 'is-pending'">
+              {{ selectedAxle.has_shapes ? `Procesado · ${selectedAxle.shapes_count} shapes` : "Sin procesar" }}
+            </dd>
+          </div>
+        </dl>
+
+        <p class="ax-warning">
+          <span class="material-icons" aria-hidden="true">warning</span>
+          Se borran también sus shapes, segmentos, velocidades, alertas y demás datos relacionados. No se puede
+          deshacer.
+        </p>
+
+        <div v-if="deleteErrorMsg || deleteSuccessMsg" class="ax-status" role="status">
+          <p v-if="deleteErrorMsg" class="ax-msg ax-msg--error">{{ deleteErrorMsg }}</p>
+          <p v-if="deleteSuccessMsg" class="ax-msg ax-msg--ok">{{ deleteSuccessMsg }}</p>
         </div>
 
-        <div v-if="deleteErrorMsg || deleteSuccessMsg" class="status-messages">
-          <p v-if="deleteErrorMsg" class="error-msg">{{ deleteErrorMsg }}</p>
-          <p v-if="deleteSuccessMsg" class="success-msg">
-            {{ deleteSuccessMsg }}
-          </p>
-        </div>
-
-        <div class="form-actions">
+        <div class="ax-actions">
           <button
             type="button"
-            class="delete-button"
-            @click="handleDelete"
+            class="btn btn--danger"
             :disabled="!selectedAxleId || deletingAxle"
+            @click="handleDelete"
           >
-            {{ deletingAxle ? "Eliminando..." : "Eliminar Eje" }}
+            <span class="material-icons" :class="{ spin: deletingAxle }" aria-hidden="true">
+              {{ deletingAxle ? "progress_activity" : "delete" }}
+            </span>
+            {{ deletingAxle ? "Eliminando" : "Eliminar eje" }}
           </button>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
-.place-streets-form {
-  min-height: 100vh;
-  background: #f5f5f5;
-  padding: 20px;
+.axes-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.ax-card {
+  padding: var(--s-6);
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+.ax-title {
+  margin: 0;
+}
+.ax-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 0.8fr);
+  gap: var(--s-8);
+}
+.ax-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+.ax-label {
+  color: var(--ink-3);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  font-variation-settings: "wdth" 87.5;
+  padding: 0;
+  margin-bottom: 6px;
+}
+.streets {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.streets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.street-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-2);
+}
+.street-idx {
+  color: var(--ink-3);
+  font-size: var(--t-micro);
+}
+.ax-add {
+  margin-top: var(--s-3);
+  margin-left: 32px;
+}
+.ax-help {
+  border-left: 1px solid var(--rule);
+  padding-left: var(--s-6);
+}
+.ax-help dl {
+  margin: 0;
+}
+.ax-help dt {
+  color: var(--ink-3);
+  font-size: var(--t-micro);
+  margin-top: var(--s-4);
+}
+.ax-help dt:first-child {
+  margin-top: 0;
+}
+.ax-help dd {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-small);
+  max-width: 44ch;
+}
+.ax-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.ax-msg {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--t-small);
+  background: var(--tile-2);
+  word-break: break-word;
+}
+.ax-msg--error {
+  color: var(--severe-ink);
+}
+.ax-msg--ok {
+  color: var(--ink);
+}
+.ax-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
-.cards-container {
+.ax-field {
   display: flex;
-  gap: 24px;
-  width: 100%;
-  max-width: 1200px;
-  margin-top: 20px;
-  align-items: flex-start;
+  flex-direction: column;
 }
-
-.card {
-  background: white;
-  border-radius: 12px;
-  padding: 32px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.ax-select-row {
+  display: flex;
+  gap: var(--s-2);
+}
+.ax-select {
+  position: relative;
   flex: 1;
   min-width: 0;
 }
-
-.create-card {
-  flex: 1.2;
+.ax-select select {
+  width: 100%;
+  height: 40px;
+  padding: 0 36px 0 var(--s-3);
+  appearance: none;
+  background: var(--ground);
+  border: 0;
+  box-shadow: 0 0 0 1px var(--rule-strong) inset;
+  border-radius: var(--radius);
+  font-size: var(--t-small);
+  cursor: pointer;
 }
-
-.delete-card {
-  flex: 0.8;
+.ax-select select:hover {
+  box-shadow: 0 0 0 1px var(--ink-2) inset;
 }
-
-.form-title {
-  color: #31304d;
-  font-size: 28px;
-  font-weight: 600;
-  margin-bottom: 24px;
-  text-align: center;
+.ax-select select:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
 }
-
-.instructions {
-  background: #f8f9fa;
-  border-left: 4px solid #31304d;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 32px;
-}
-
-.instructions-title {
-  color: #31304d;
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px 0;
-}
-
-.instructions-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.instructions-list li {
-  color: #495057;
-  font-size: 14px;
-  line-height: 1.6;
-  padding-left: 20px;
-  position: relative;
-}
-
-.instructions-list li::before {
-  content: "•";
-  color: #31304d;
-  font-weight: bold;
-  font-size: 18px;
+.ax-select .material-icons {
   position: absolute;
-  left: 0;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--ink-3);
 }
-
-.instructions-list strong {
-  color: #31304d;
-  font-weight: 600;
+.ax-select-row .btn {
+  width: 40px;
+  height: 40px;
 }
-
-.osm-link {
-  color: #31304d;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-
-.osm-link:hover {
-  color: #31304d;
-  text-decoration: underline;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-label {
-  color: #31304d;
-  font-weight: 500;
-  font-size: 16px;
-}
-
-.streets-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.add-street-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  color: #31304d;
-  border: 2px dashed #31304d;
-  border-radius: 8px;
-  padding: 12px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
-  justify-content: center;
-}
-
-.add-street-btn:hover {
-  background: #31304d;
-  color: white;
-  border-style: solid;
-}
-
-.add-street-btn .add-icon {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.streets-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.street-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.remove-street-btn {
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-
-.remove-street-btn:hover {
-  background: #c82333;
-}
-
-.form-actions {
-  display: flex;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.form-actions > * {
-  flex: 1;
-}
-
-.submit-button {
-  background: #31304d;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 14px 24px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-  width: 100%;
-}
-
-.submit-button:hover:not(:disabled) {
-  background: #4a4970;
-}
-
-.submit-button:disabled {
-  background: #a9a8b8;
-  cursor: not-allowed;
-}
-
-.status-messages {
-  margin-top: -8px;
-}
-.error-msg {
-  color: #dc3545;
-  font-size: 14px;
-}
-.success-msg {
-  color: #198754;
-  font-size: 14px;
-}
-
-/* Delete Section Styles */
-.select-wrapper {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.axle-select {
-  flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #495057;
-  background: white;
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.axle-select:focus {
-  outline: none;
-  border-color: #31304d;
-  box-shadow: 0 0 0 3px rgba(49, 48, 77, 0.1);
-}
-
-.axle-select:disabled {
-  background: #f8f9fa;
-  cursor: not-allowed;
-}
-
-.refresh-btn {
-  background: #31304d;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 20px;
-  transition: background 0.2s;
-}
-
-.refresh-btn:hover:not(:disabled) {
-  background: #4a4970;
-}
-
-.refresh-btn:disabled {
-  background: #adb5bd;
-  cursor: not-allowed;
-}
-
-.axle-info {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 16px;
-}
-
-.axle-info h4 {
-  color: #31304d;
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0 0 12px 0;
-}
-
-.axle-info ul {
-  list-style: none;
-  padding: 0;
+.ax-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3) var(--s-4);
   margin: 0;
+  padding: var(--s-4);
+  background: var(--tile-2);
+}
+.ax-info-wide {
+  grid-column: 1 / -1;
+}
+.ax-info dt {
+  color: var(--ink-3);
+  font-size: var(--t-micro);
+}
+.ax-info dd {
+  margin: 2px 0 0;
+  font-size: var(--t-small);
+}
+.ax-info .is-ok {
+  color: var(--ok-ink);
+}
+.ax-info .is-pending {
+  color: var(--now-line);
+}
+.ax-warning {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+.ax-warning .material-icons {
+  font-size: 18px;
+  color: var(--severe-ink);
 }
 
-.axle-info li {
-  color: #495057;
-  font-size: 13px;
-}
-
-.axle-info strong {
-  color: #31304d;
-}
-
-.status-processed {
-  color: #198754;
-  font-weight: 500;
-}
-
-.status-pending {
-  color: #ffc107;
-  font-weight: 500;
-}
-
-.delete-button {
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 14px 24px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-  width: 100%;
-}
-
-.delete-button:hover:not(:disabled) {
-  background: #c82333;
-}
-
-.delete-button:disabled {
-  background: #f5c6cb;
-  cursor: not-allowed;
-}
-
-/* Responsive design */
-@media (max-width: 992px) {
-  .cards-container {
-    flex-direction: column;
-  }
-
-  .card {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .create-card,
-  .delete-card {
-    flex: 1;
+@media (max-width: 1180px) {
+  .axes-grid {
+    grid-template-columns: 1fr;
   }
 }
-
-@media (max-width: 768px) {
-  .place-streets-form {
-    padding: 12px;
+@media (max-width: 760px) {
+  .ax-cols {
+    grid-template-columns: 1fr;
   }
-
-  .card {
-    padding: 24px;
-  }
-
-  .form-title {
-    font-size: 24px;
-    margin-bottom: 20px;
-  }
-
-  .instructions {
-    padding: 16px;
-    margin-bottom: 24px;
-  }
-
-  .instructions-title {
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-
-  .instructions-list li {
-    font-size: 13px;
-  }
-
-  .streets-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  .form-actions {
-    flex-direction: column;
+  .ax-help {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--rule);
+    padding-top: var(--s-4);
   }
 }
 </style>

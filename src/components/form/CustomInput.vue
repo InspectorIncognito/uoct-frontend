@@ -1,33 +1,48 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
-defineProps({
+const props = defineProps({
   type: {
     type: String,
     default: "text",
   },
   placeholder: {
     type: String,
-    default: "Default placeholder",
+    default: "",
   },
   name: {
     type: String,
     default: "custom-input",
   },
+  label: {
+    type: String,
+    default: null,
+  },
   icon: {
-    type: String || null,
+    type: String,
     default: null,
   },
   error: {
-    type: String || null,
-    default: "default error msg.",
+    type: String,
+    default: null,
   },
   hideLabel: {
     type: Boolean,
     default: false,
   },
+  value: {
+    type: String,
+    default: undefined,
+  },
+  autocomplete: {
+    type: String,
+    default: undefined,
+  },
 });
-defineEmits(["input"]);
+const emit = defineEmits(["input"]);
+function onInput(event: Event) {
+  emit("input", (event.target as HTMLInputElement).value);
+}
 
 const showPassword = ref(false);
 function toggleShowPassword() {
@@ -36,88 +51,113 @@ function toggleShowPassword() {
 function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+const inputType = computed(() => (props.type === "password" ? (showPassword.value ? "text" : "password") : props.type));
+const labelText = computed(() => props.label ?? capitalize(props.name));
 </script>
 
 <template>
-  <div class="custom-input-block">
-    <label v-if="!hideLabel" :for="name">{{ capitalize(name) }}</label>
-    <div class="custom-input-container">
-      <span v-if="icon != null" class="material-icons filled">{{ icon }}</span>
+  <div class="field">
+    <label v-if="!hideLabel" :for="name" class="field-label">{{ labelText }}</label>
+    <div class="field-box" :class="{ 'has-error': error }">
+      <span v-if="icon" class="material-icons field-icon" aria-hidden="true">{{ icon }}</span>
       <input
+        :id="name"
         :name="name"
-        v-if="type === 'text'"
-        class="custom-input"
-        :type="type"
+        class="field-input"
+        :type="inputType"
         :placeholder="placeholder"
-        @input="$emit('input', $event.target.value)"
+        :value="value"
+        :autocomplete="autocomplete"
+        :aria-label="hideLabel ? placeholder || labelText : undefined"
+        :aria-invalid="error ? true : undefined"
+        @input="onInput"
       />
-      <input
-        v-else-if="type === 'password'"
-        class="custom-input"
-        :type="showPassword ? 'text' : 'password'"
-        :placeholder="placeholder"
-        @input="$emit('input', $event.target.value)"
-      />
-      <span
+      <button
         v-if="type === 'password'"
-        class="visibility material-icons"
+        type="button"
+        class="field-toggle"
+        :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
         @click="toggleShowPassword"
-        >{{ showPassword ? "visibility" : "visibility_off" }}</span
       >
+        <span class="material-icons" aria-hidden="true">
+          {{ showPassword ? "visibility" : "visibility_off" }}
+        </span>
+      </button>
     </div>
-    <div v-if="error != null" class="error-msg">{{ error }}</div>
+    <div v-if="error" class="field-error">{{ error }}</div>
   </div>
 </template>
 
 <style scoped>
-input,
-input:focus {
-  font-family: Roboto, serif;
-  border: none;
-  outline: none;
-  box-shadow: none;
-}
-label {
-  font-family: "Roboto", serif;
-  text-align: left;
-}
-.custom-input {
-  border-radius: 4px;
-  font-size: 14px;
-  height: 32px;
-  width: 300px;
-}
-.custom-input-container {
-  padding: 0 8px;
-  border: 2px solid gray;
-  border-radius: 4px;
-  width: 300px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 4px 0;
-}
-.custom-input-container span {
-  user-select: none;
-}
-.visibility {
-  cursor: pointer;
-}
-.custom-input-block {
+.field {
   display: flex;
   flex-direction: column;
-  justify-content: left;
+  gap: 6px;
+  min-width: 0;
 }
-
-.error-msg {
-  display: none;
-  font-family: Roboto, serif;
-  font-size: 16px;
-  color: firebrick;
+.field-label {
+  color: var(--ink-3);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  font-variation-settings: "wdth" 87.5;
 }
-.error-msg.active {
-  display: block;
+.field-box {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 40px;
+  padding: 0 var(--s-3);
+  background: var(--ground);
+  box-shadow: 0 0 0 1px var(--rule-strong) inset;
+  border-radius: var(--radius);
+  transition: box-shadow var(--dur) var(--ease-out);
+}
+.field-box:hover {
+  box-shadow: 0 0 0 1px var(--ink-2) inset;
+}
+.field-box:focus-within {
+  box-shadow: 0 0 0 1px var(--now-line) inset;
+}
+.field-box.has-error {
+  box-shadow: 0 0 0 1px var(--severe-ink) inset;
+}
+.field-icon {
+  font-size: 18px;
+  color: var(--ink-3);
+}
+.field-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--t-small);
+}
+.field-input::placeholder {
+  color: var(--ink-3);
+}
+.field-toggle {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.field-toggle:hover {
+  color: var(--ink);
+}
+.field-toggle .material-icons {
+  font-size: 18px;
+}
+.field-error {
+  color: var(--severe-ink);
+  font-size: var(--t-small);
 }
 </style>

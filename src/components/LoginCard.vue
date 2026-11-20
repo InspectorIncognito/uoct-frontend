@@ -58,54 +58,88 @@ const login = () => {
 </script>
 
 <template>
-  <div class="login-card">
-    <div class="title">Inicio de sesión</div>
-    <form class="login-form" :model="model" :rules="rules" ref="form" @submit.prevent="login">
+  <section class="login-card tile" aria-labelledby="login-title">
+    <header class="lc-head">
+      <svg class="lc-mark" viewBox="0 0 18 18" aria-hidden="true">
+        <rect x="0" y="0" width="5" height="5" class="m-cell" />
+        <rect x="6.5" y="0" width="5" height="5" class="m-cell" />
+        <rect x="13" y="0" width="5" height="5" class="m-hot" />
+        <rect x="0" y="6.5" width="5" height="5" class="m-cell" />
+        <rect x="6.5" y="6.5" width="5" height="5" class="m-hot" />
+        <rect x="13" y="6.5" width="5" height="5" class="m-cell" />
+        <rect x="0" y="13" width="5" height="5" class="m-hot" />
+        <rect x="6.5" y="13" width="5" height="5" class="m-cell" />
+        <rect x="13" y="13" width="5" height="5" class="m-cell" />
+      </svg>
+      <div>
+        <h1 id="login-title" class="lc-title">UOCT</h1>
+        <p class="lc-sub">Velocidad de buses en los ejes de Santiago</p>
+      </div>
+    </header>
+    <form class="login-form" ref="form" @submit.prevent="login">
       <CustomInput
         icon="person"
         name="username"
-        placeholder="Nombre de usuario"
+        :label="t('username')"
+        placeholder="usuario"
         type="text"
+        autocomplete="username"
         @input="(newValue) => (model.username = newValue)"
       />
       <CustomInput
         icon="key"
         name="password"
-        placeholder="Contraseña"
+        :label="t('password')"
+        placeholder="••••••••"
         type="password"
+        autocomplete="current-password"
         @input="(newValue) => (model.password = newValue)"
       />
-      <CustomButton type="submit" text="Iniciar sesión"></CustomButton>
+      <CustomButton type="submit" :text="loading ? 'Entrando' : t('login.loginButton')" :loading="loading" />
     </form>
-  </div>
+  </section>
 </template>
 
 <style scoped>
 .login-card {
+  width: min(400px, 100%);
+  padding: var(--s-8);
   display: flex;
   flex-direction: column;
+  gap: var(--s-8);
+  box-shadow: var(--shadow-float);
+}
+.lc-head {
+  display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 36px 0;
-  border-radius: 8px;
-  border: 1px solid grey;
-  background: #ffffff;
-  height: auto;
-  width: 400px;
+  gap: var(--s-4);
 }
-
-.login-card .title {
-  font-size: 28px;
-  font-weight: bold;
-  font-family: Roboto, serif;
-  color: #222222;
-  margin-bottom: 16px;
+.lc-mark {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
 }
-
+.m-cell {
+  fill: var(--rule-strong);
+}
+.m-hot {
+  fill: var(--now);
+}
+.lc-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.lc-sub {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-small);
+}
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  align-items: center;
+  gap: var(--s-5);
 }
 </style>

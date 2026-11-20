@@ -32,11 +32,13 @@ const monthString = currentDate.toLocaleString("default", { month: "long" });
 
 const dayTypeValue = ref(dayTypeOptions[dayTypeOptions.length - 1].value);
 
-const temporalSegmentOptions: Array<{ label: string; value: number }> =
-  Array.from({ length: temporalSegmentRange }, (_, t) => ({
+const temporalSegmentOptions: Array<{ label: string; value: number }> = Array.from(
+  { length: temporalSegmentRange },
+  (_, t) => ({
     label: parseTemporalSegment(t),
     value: t,
-  }));
+  })
+);
 temporalSegmentOptions.unshift({ label: "Todos", value: -1 });
 const selectedTemporalSegment = ref(-1);
 
@@ -93,11 +95,7 @@ function downloadSpeeds(dayType: string | boolean, temporalSegment: number) {
     });
 }
 
-function updateSpeedData(
-  dayType: string | boolean,
-  temporalSegment = -1,
-  usePage = true
-) {
+function updateSpeedData(dayType: string | boolean, temporalSegment = -1, usePage = true) {
   loading.value = true;
   if (!usePage) {
     currentPage.value = 1;
@@ -121,18 +119,10 @@ function updateSpeedData(
       timestamp_local: "timestamp",
     };
     const backendField = propMap[sortProp.value] || sortProp.value;
-    ordering =
-      sortOrder.value === "descending" ? `-${backendField}` : backendField;
+    ordering = sortOrder.value === "descending" ? `-${backendField}` : backendField;
   }
 
-  SpeedAPI.getSpeeds(
-    startTime,
-    endTime,
-    dayType,
-    temporalSegment,
-    page,
-    ordering
-  )
+  SpeedAPI.getSpeeds(startTime, endTime, dayType, temporalSegment, page, ordering)
     .then((resp) => {
       const response = resp.data as { count: number; results: any[] };
       const newTotalCount: number = response.count;
@@ -174,17 +164,28 @@ function pageDown() {
   updateSpeedData(dayTypeValue.value, selectedTemporalSegment.value);
 }
 
-function handleSortChange({
-  prop,
-  order,
-}: {
-  prop: string | null;
-  order: "ascending" | "descending" | null;
-}) {
+function handleSortChange({ prop, order }: { prop: string | null; order: "ascending" | "descending" | null }) {
   sortProp.value = prop;
   sortOrder.value = order;
   currentPage.value = 1; // Reset to first page when sorting changes
   updateSpeedData(dayTypeValue.value, selectedTemporalSegment.value);
+}
+
+const DAY_LABEL: Record<string, string> = { L: "Laboral", S: "Sábado", D: "Domingo" };
+
+function dayTypeFormatter(row: any) {
+  return DAY_LABEL[row.day_type] ?? row.day_type;
+}
+
+function speedFormatter(row: any) {
+  const d = Number(row.distance);
+  const t = Number(row.time_secs);
+  return t > 0 ? ((3.6 * d) / t).toFixed(1) : "—";
+}
+
+function numberFormatter(_row: any, _col: any, value: any) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(1) : value;
 }
 
 onMounted(() => {
@@ -193,296 +194,144 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="table-view">
-    <div class="table-section-header">
-      <span>Velocidades registradas</span>
-    </div>
-    <div class="table-container">
-      <div class="table-buttons-container">
-        <div class="options-section">
-          <div class="option-container">
-            <span>Fecha</span>
-            <el-date-picker
-              v-model="dateTimeValue"
-              type="datetimerange"
-              start-placeholder="Fecha inicio"
-              end-placeholder="Fecha fin"
-              :clearable="false"
-            />
-          </div>
-          <div class="option-container">
-            <span>Tipo de día</span>
-            <el-select
-              v-model="dayTypeValue"
-              placeholder="Select"
-              style="width: 240px"
-            >
-              <el-option
-                v-for="item in dayTypeOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </div>
-          <div class="option-container">
-            <span>Segmento temporal</span>
-            <el-select
-              v-model="selectedTemporalSegment"
-              placeholder="Select"
-              style="width: 240px"
-            >
-              <el-option
-                v-for="item in temporalSegmentOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </div>
-        </div>
+  <div class="page">
+    <header class="page-head">
+      <div>
+        <h1>Velocidades registradas</h1>
+        <p>
+          Una fila por segmento y ventana de 7,5 minutos. La velocidad se calcula como distancia sobre tiempo de los
+          buses que cruzaron el segmento.
+        </p>
+      </div>
+    </header>
 
-        <el-button
-          @click="updateSpeedData(dayTypeValue, selectedTemporalSegment, false)"
-          >Aplicar filtros</el-button
+    <section class="params tile" aria-label="Filtros">
+      <div class="param">
+        <label for="sv-range">Fecha y hora</label>
+        <el-date-picker
+          id="sv-range"
+          v-model="dateTimeValue"
+          type="datetimerange"
+          start-placeholder="Desde"
+          end-placeholder="Hasta"
+          range-separator="→"
+          format="YYYY-MM-DD HH:mm"
+          :clearable="false"
+          style="width: 400px"
+        />
+      </div>
+      <div class="param">
+        <span class="param-label">Tipo de día</span>
+        <el-select v-model="dayTypeValue" style="width: 180px" aria-label="Tipo de día">
+          <el-option v-for="item in dayTypeOptions" :key="String(item.value)" :label="item.label" :value="item.value" />
+        </el-select>
+      </div>
+      <div class="param">
+        <span class="param-label">Intervalo</span>
+        <el-select
+          v-model="selectedTemporalSegment"
+          filterable
+          style="width: 220px"
+          aria-label="Intervalo de 7,5 minutos"
         >
+          <el-option v-for="item in temporalSegmentOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
       </div>
-      <div class="table-data-info">
-        <span>Los datos mostrados en la tabla estan en zona horaria America/Santiago (con cambio de horario automatico)</span>
+      <div class="params-actions">
+        <button
+          type="button"
+          class="btn btn--primary"
+          :disabled="loading"
+          @click="updateSpeedData(dayTypeValue, selectedTemporalSegment, false)"
+        >
+          <span class="material-icons" aria-hidden="true">filter_alt</span>
+          Aplicar filtros
+        </button>
       </div>
+    </section>
+
+    <section class="table-tile tile" aria-label="Velocidades">
       <el-table
         v-loading="loading"
-        class="historic-speed-table"
         ref="tableRef"
         row-key="date"
         :data="tableData"
-        style="width: 60vw; height: 50vh"
+        height="calc(100vh - 420px)"
+        style="width: 100%; min-height: 320px"
+        empty-text="No hay registros para estos filtros."
         @sort-change="handleSortChange"
       >
-        <el-table-column
-          fixed
-          sortable="custom"
-          prop="shape"
-          label="Shape"
-          column-key="Shape"
-        />
-        <el-table-column sortable="custom" prop="sequence" label="Secuencia" />
+        <el-table-column fixed sortable="custom" prop="shape" label="Shape" min-width="90" />
+        <el-table-column sortable="custom" prop="sequence" label="Seg." min-width="80" />
+        <el-table-column sortable="custom" prop="temporal_segment" label="Intervalo" min-width="170" />
+        <el-table-column sortable="custom" prop="day_type" label="Día" min-width="100" :formatter="dayTypeFormatter" />
+        <el-table-column label="km/h" min-width="90" align="right" :formatter="speedFormatter" />
         <el-table-column
           sortable="custom"
-          prop="temporal_segment"
-          label="Segmento Temporal"
+          prop="distance"
+          label="Distancia (m)"
+          min-width="130"
+          align="right"
+          :formatter="numberFormatter"
         />
-        <el-table-column
-          sortable="custom"
-          prop="day_type"
-          label="Tipo de Día"
-        />
-        <el-table-column sortable="custom" prop="distance" label="Distancia" />
         <el-table-column
           sortable="custom"
           prop="time_secs"
-          label="Tiempo (seg)"
+          label="Tiempo (s)"
+          min-width="120"
+          align="right"
+          :formatter="numberFormatter"
         />
-        <el-table-column
-          sortable="custom"
-          prop="timestamp_local"
-          label="Fecha"
-        />
+        <el-table-column sortable="custom" prop="timestamp_local" label="Fecha" min-width="180" />
       </el-table>
-      <div class="table-pagination">
-        <span>{{ totalCount }} registros</span>
-        <div class="pagination" v-if="totalPages">
-          <el-button
-            :disabled="currentPage == 1"
-            class="pagination-button"
+      <div class="table-meta">
+        <span class="table-note">
+          <span class="material-icons" aria-hidden="true">schedule</span>
+          Hora de Chile (America/Santiago), con cambio de horario automático.
+        </span>
+        <div class="pager num" v-if="totalPages">
+          <span>{{ totalCount.toLocaleString("es-CL") }} registros</span>
+          <button
+            type="button"
+            class="btn"
+            :disabled="currentPage == 1 || loading"
+            aria-label="Página anterior"
             @click="pageDown"
           >
-            <span class="material-icons">chevron_left</span>
-          </el-button>
-          <span>{{ currentPage }} de {{ totalPages }}</span>
-          <el-button
-            :disabled="currentPage == totalPages"
-            class="pagination-button"
+            <span class="material-icons" aria-hidden="true">chevron_left</span>
+          </button>
+          <span>{{ currentPage }} / {{ totalPages }}</span>
+          <button
+            type="button"
+            class="btn"
+            :disabled="currentPage == totalPages || loading"
+            aria-label="Página siguiente"
             @click="pageUp"
           >
-            <span class="material-icons">chevron_right</span>
-          </el-button>
+            <span class="material-icons" aria-hidden="true">chevron_right</span>
+          </button>
         </div>
       </div>
-    </div>
-    <div class="download-container">
-      <div class="option-container download-option">
-        <span>Formato de descarga</span>
-        <el-select
-          v-model="selectedTimeFormat"
-          placeholder="Select"
-          style="width: 200px"
-        >
-          <el-option
-            v-for="item in timeFormatOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
+    </section>
+
+    <section class="download tile" aria-label="Descarga">
+      <div class="param">
+        <span class="param-label">Hora en el archivo</span>
+        <el-select v-model="selectedTimeFormat" style="width: 240px" aria-label="Hora en el archivo">
+          <el-option v-for="item in timeFormatOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </div>
-      <div
-        class="download-button"
-        :class="{ 'download-button-loading': isDownloading }"
-        @click="
-          !isDownloading &&
-            downloadSpeeds(dayTypeValue, selectedTemporalSegment)
-        "
+      <button
+        type="button"
+        class="btn"
+        :disabled="isDownloading"
+        @click="downloadSpeeds(dayTypeValue, selectedTemporalSegment)"
       >
-        <div class="download-label">Descargar</div>
-        <span class="material-icons" v-if="!isDownloading">download</span>
-        <span class="material-icons spinner" v-else>sync</span>
-      </div>
-    </div>
+        <span class="material-icons" :class="{ spin: isDownloading }" aria-hidden="true">
+          {{ isDownloading ? "progress_activity" : "download" }}
+        </span>
+        {{ isDownloading ? "Preparando CSV" : "Descargar CSV" }}
+      </button>
+    </section>
   </div>
 </template>
-
-<style scoped>
-.options-section {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-}
-
-.option-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: left;
-}
-
-.table-buttons-container {
-  display: flex;
-  flex-direction: row;
-  width: 60vw;
-  color: white;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding-bottom: 8px;
-}
-
-.download-container {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  flex-direction: row;
-  gap: 16px;
-  padding: 8px 8px;
-}
-
-.download-option {
-  color: white;
-}
-
-.table-data-info {
-  color: #aaa;
-  font-size: 12px;
-  width: 60vw;
-  text-align: left;
-  padding: 4px 0;
-}
-
-.download-label {
-  color: white;
-  font-size: 16px;
-  letter-spacing: 1px;
-}
-
-.download-button {
-  background: #31304d;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  min-width: min-content;
-  text-transform: uppercase;
-  font-family: Roboto, serif;
-  font-weight: 600;
-  user-select: none;
-  padding: 8px;
-  cursor: pointer;
-  border: 1px solid white;
-}
-
-.download-button span {
-  font-size: 24px;
-  color: white;
-}
-
-.download-button-loading {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.table-view {
-  display: flex;
-  flex-direction: column;
-  background: #161a30;
-  height: 100%;
-  width: 100%;
-}
-
-.table-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
-
-.historic-speed-table {
-  border-radius: 8px;
-}
-
-.table-pagination {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  width: 60vw;
-  height: 32px;
-}
-
-.pagination {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-
-.pagination-button {
-  background: #31304d;
-  color: white;
-}
-
-.table-section-header {
-  display: flex;
-  background: #31304d;
-  height: 10vh;
-  color: white;
-  font-family: Roboto, sans-serif;
-  font-size: 2vw;
-  align-items: center;
-  padding-left: 16px;
-}
-</style>

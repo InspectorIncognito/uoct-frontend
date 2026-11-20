@@ -1,5 +1,40 @@
-const TEMPORAL_RANGE = 15;
-export const temporalSegmentRange = Math.floor(1440 / 15);
+/**
+ * Length of a temporal segment (speed window) in minutes. Must match the
+ * backend's TEMPORAL_SEGMENT_MINUTES (velocity/constants.py).
+ */
+export const TEMPORAL_RANGE = 7.5;
+export const TEMPORAL_MS = TEMPORAL_RANGE * 60 * 1000;
+
+// Building an Intl.DateTimeFormat is expensive (much more so in Firefox), and
+// these helpers run once per CSV row, so formatters are built once and reused.
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+function cachedFormatter(locale: string, options: Intl.DateTimeFormatOptions) {
+  const key = locale + JSON.stringify(options);
+  let formatter = formatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    formatterCache.set(key, formatter);
+  }
+  return formatter;
+}
+export const temporalSegmentRange = Math.floor(1440 / TEMPORAL_RANGE);
+
+/** "HH:MM", or "HH:MM:SS" when the instant is not on a whole minute. 1440 -> "24:00". */
+export function formatMinuteOfDay(minutes: number) {
+  if (minutes >= 1440) return "24:00";
+  const total = Math.round(minutes * 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return sec ? `${pad(h)}:${pad(m)}:${pad(sec)}` : `${pad(h)}:${pad(m)}`;
+}
+
+/** Label "HH:MM–HH:MM" of a local temporal segment index. */
+export function temporalSegmentLabel(localIndex: number) {
+  const start = localIndex * TEMPORAL_RANGE;
+  return `${formatMinuteOfDay(start)}–${formatMinuteOfDay(start + TEMPORAL_RANGE)}`;
+}
 export const monthOptions = [
   { value: 1, label: "Enero" },
   { value: 2, label: "Febrero" },
@@ -32,28 +67,11 @@ export function getDayTypeIndex(dayType: string) {
 
 export function parseTemporalSegment(idx: number) {
   if (!idx && idx !== 0) return "";
-  const startTime = idx * TEMPORAL_RANGE;
-  const endTime = startTime + TEMPORAL_RANGE;
-
-  const startHours = Math.floor(startTime / 60);
-  const endHours = Math.floor(endTime / 60);
-  const startMinutes = startTime % 60;
-  const endMinutes = endTime % 60;
-
-  const formatTime = (hours: number, minutes: number) => {
-    if (hours === 24) {
-      return "23:59";
-    }
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-      2,
-      "0",
-    )}`;
-  };
-
-  const start = formatTime(startHours, startMinutes);
-  const end = formatTime(endHours, endMinutes);
-
-  return `${start} - ${end} (${idx})`;
+  const start = idx * TEMPORAL_RANGE;
+  const end = start + TEMPORAL_RANGE;
+  // A segment ending at midnight is shown as 23:59 (legacy behaviour).
+  const fmt = (m: number) => (m >= 1440 ? "23:59" : formatMinuteOfDay(m));
+  return `${fmt(start)} - ${fmt(end)} (${idx})`;
 }
 
 export function parseDateObject(date: Date) {
@@ -85,10 +103,7 @@ export function parseDateObject(date: Date) {
  *  formatUTCToZone("2023-10-03T15:00:00Z") // "2023-10-03 12:00:00" (UTC-3 during summer)
  *  formatUTCToZone(new Date(), "America/New_York") // custom timezone
  */
-export function formatUTCToZone(
-  value: number | string | Date,
-  timeZone = "America/Santiago",
-) {
+export function formatUTCToZone(value: number | string | Date, timeZone = "America/Santiago") {
   let date: Date;
 
   if (value instanceof Date) {
@@ -105,7 +120,7 @@ export function formatUTCToZone(
   }
 
   // Intl.DateTimeFormat with timeZone handles DST correctly
-  const dtf = new Intl.DateTimeFormat("es-CL", {
+  const dtf = cachedFormatter("es-CL", {
     timeZone,
     year: "numeric",
     month: "2-digit",
@@ -135,7 +150,7 @@ export function formatUTCToZone(
 export function temporalSegmentFromTimestamp(
   value: number | string | Date,
   timeZone = "America/Santiago",
-  range = TEMPORAL_RANGE,
+  range = TEMPORAL_RANGE
 ) {
   // Reuse the same heuristics for epoch detection
   let date: Date;
@@ -148,10 +163,11 @@ export function temporalSegmentFromTimestamp(
     date = new Date(value);
   }
 
-  const dtf = new Intl.DateTimeFormat("en-US", {
+  const dtf = cachedFormatter("en-US", {
     timeZone,
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     day: "2-digit",
     hour12: false,
   });
@@ -163,7 +179,8 @@ export function temporalSegmentFromTimestamp(
 
   const hour = Number(parts.hour || "0");
   const minute = Number(parts.minute || "0");
-  const minutesSinceMid = hour * 60 + minute;
+  const second = Number(parts.second || "0");
+  const minutesSinceMid = hour * 60 + minute + second / 60;
   const idx = Math.floor(minutesSinceMid / range);
   const total = Math.floor(1440 / range);
   return ((idx % total) + total) % total;
@@ -180,20 +197,13 @@ export function temporalSegmentFromUTCIndex(
   utcIndex: number,
   referenceDate: Date,
   timeZone = "America/Santiago",
-  range = TEMPORAL_RANGE,
+  range = TEMPORAL_RANGE
 ) {
   const total = Math.floor(1440 / range);
 
   // Compute offset in minutes between UTC midnight and local time at that UTC midnight
-  const utcMidMs = Date.UTC(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth(),
-    referenceDate.getDate(),
-    0,
-    0,
-    0,
-  );
-  const dtf = new Intl.DateTimeFormat("en-US", {
+  const utcMidMs = Date.UTC(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate(), 0, 0, 0);
+  const dtf = cachedFormatter("en-US", {
     timeZone,
     year: "numeric",
     month: "2-digit",

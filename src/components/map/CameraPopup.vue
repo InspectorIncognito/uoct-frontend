@@ -5,65 +5,47 @@ defineProps({
 </script>
 
 <template>
-  <div class="camera-popup">
-    <div class="header">
-      <span class="material-icons">videocam</span>
+  <div class="cam-popup">
+    <header class="cp-head caps">
+      <span class="material-icons" aria-hidden="true">videocam</span>
       Cámara CCTV
-    </div>
-    <div class="section-container">
-      <div class="section">
-        <div class="section-label">ID de la UOCT:</div>
-        <div class="section-data">{{ cameraId }}</div>
-      </div>
+    </header>
+    <div class="cp-body">
+      <span class="caps cp-k">ID UOCT</span>
+      <span class="cp-v num">{{ cameraId }}</span>
     </div>
   </div>
 </template>
 
 <style scoped>
-.camera-popup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
-  min-width: 150px;
+.cam-popup {
+  font-family: var(--font);
+  color: var(--ink);
+  min-width: 200px;
 }
-
-.header {
+.cp-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: bold;
-  font-size: 14px;
-  color: #333;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
+  gap: var(--s-2);
+  padding: 8px var(--s-3);
+  background: var(--tile-2);
+  border-bottom: 1px solid var(--rule);
 }
-
-.header .material-icons {
-  font-size: 18px;
-  color: #3b5b97;
+.cp-head .material-icons {
+  font-size: 16px;
 }
-
-.section-container {
+.cp-body {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-4);
+  padding: var(--s-3);
 }
-
-.section {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.cp-k {
+  color: var(--ink-3);
+  font-size: var(--t-micro);
 }
-
-.section-label {
-  font-weight: 600;
-  color: #666;
-  font-size: 12px;
-}
-
-.section-data {
-  font-size: 12px;
-  color: #333;
+.cp-v {
+  font-size: var(--t-title);
 }
 </style>
